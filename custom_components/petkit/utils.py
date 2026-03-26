@@ -131,14 +131,14 @@ def get_raw_feed_plan_from_schedule(feeder) -> str | None:
         current_seconds = now.hour * 3600 + now.minute * 60 + now.second
 
         for feed in records.feed:
-            for item in (feed.items or []):
+            for item in feed.items or []:
                 t = getattr(item, "time", 0) or 0
                 src = getattr(item, "src", 0) or 0
                 status_val = getattr(item, "status", 0) or 0
                 item_state = getattr(item, "state", None)
 
                 state = 0  # pending
-                if (item_state is None and status_val == 0 and t < current_seconds):
+                if item_state is None and status_val == 0 and t < current_seconds:
                     state = 6  # unknown / past due
                 elif status_val == 1:
                     state = 7  # cancelled

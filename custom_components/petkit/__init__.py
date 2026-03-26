@@ -5,10 +5,9 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
-import voluptuous as vol
-
 from pypetkitapi import Feeder, PetKitClient
 from pypetkitapi.command import FeederCommand
+import voluptuous as vol
 
 from homeassistant.const import (
     CONF_PASSWORD,
@@ -89,9 +88,7 @@ FEED_DAY_SCHEMA = vol.Schema(
 SERVICE_SET_FEEDING_SCHEDULE_SCHEMA = vol.Schema(
     {
         vol.Required("device_id"): vol.Coerce(int),
-        vol.Required("feed_daily_list"): vol.All(
-            cv.ensure_list, [FEED_DAY_SCHEMA]
-        ),
+        vol.Required("feed_daily_list"): vol.All(cv.ensure_list, [FEED_DAY_SCHEMA]),
     }
 )
 
@@ -174,9 +171,7 @@ async def _async_handle_set_feeding_schedule(
         len(api_payload),
     )
 
-    await client.send_api_request(
-        device_id, FeederCommand.SAVE_FEED, api_payload
-    )
+    await client.send_api_request(device_id, FeederCommand.SAVE_FEED, api_payload)
 
 
 async def async_setup_entry(

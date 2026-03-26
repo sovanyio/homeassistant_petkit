@@ -51,7 +51,12 @@ from homeassistant.const import (
 
 from .const import BATTERY_LEVEL_MAP, DEVICE_STATUS_MAP, DOMAIN, LOGGER, NO_ERROR
 from .entity import PetKitDescSensorBase, PetkitEntity
-from .utils import get_raw_feed_plan, get_raw_feed_plan_from_schedule, get_raw_schedule, map_litter_event, map_work_state
+from .utils import (
+    get_raw_feed_plan_from_schedule,
+    get_raw_schedule,
+    map_litter_event,
+    map_work_state,
+)
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
