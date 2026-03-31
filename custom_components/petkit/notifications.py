@@ -294,7 +294,7 @@ class PetkitNotificationManager:
                     self._check_feeder(device)
                 elif isinstance(device, WaterFountain):
                     self._check_fountain(device)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 LOGGER.exception(
                     "PetKit: error while processing notification for device %s",
                     getattr(device, "id", "?"),
