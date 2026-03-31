@@ -84,9 +84,10 @@ def _safe_get(obj: Any, *attrs: str, default: Any = None) -> Any:
     try:
         for attr in attrs:
             obj = getattr(obj, attr)
-        return obj
     except AttributeError:
         return default
+    else:
+        return obj
 
 
 def _device_name(device: Any) -> str:
