@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from pypetkitapi import Feeder, Litter, WaterFountain
+from pypetkitapi import D3, D4S, D4SH, Feeder, Litter, WaterFountain
 
 from homeassistant.components.persistent_notification import async_create, async_dismiss
 
@@ -26,6 +26,57 @@ if TYPE_CHECKING:
     from .coordinator import PetkitDataUpdateCoordinator
 
 LOGGER = logging.getLogger(__name__)
+
+# Human-readable translations for litter event keys returned by map_litter_event().
+# Mirrors the state translations in translations/en.json so notifications
+# show friendly text instead of raw translation keys.
+_LITTER_EVENT_LABELS: dict[str, str] = {
+    "auto_cleaning_canceled": "Auto cleaning canceled",
+    "auto_cleaning_canceled_kitten": "Auto cleaning canceled: kitten mode",
+    "auto_cleaning_completed": "Auto cleaning completed",
+    "auto_cleaning_failed_full": "Auto cleaning failed: waste bin full",
+    "auto_cleaning_failed_hall_l": "Auto cleaning failed: hall sensor L",
+    "auto_cleaning_failed_hall_t": "Auto cleaning failed: hall sensor T",
+    "auto_cleaning_terminated": "Auto cleaning terminated",
+    "auto_odor_failed": "Auto deodorization failed",
+    "clean_over": "Clean",
+    "deodorant_finished": "Deodorization finished",
+    "deodorant_finished_liquid_lack": "Deodorization finished: liquid low",
+    "light_over": "Light",
+    "litter_empty_completed": "Litter empty completed",
+    "litter_empty_failed_full": "Litter empty failed: waste bin full",
+    "litter_empty_failed_hall_l": "Litter empty failed: hall sensor L",
+    "litter_empty_failed_hall_t": "Litter empty failed: hall sensor T",
+    "litter_empty_terminated": "Litter empty terminated",
+    "manual_cleaning_canceled": "Manual cleaning canceled",
+    "manual_cleaning_completed": "Manual cleaning completed",
+    "manual_cleaning_failed_full": "Manual cleaning failed: waste bin full",
+    "manual_cleaning_failed_hall_l": "Manual cleaning failed: hall sensor L",
+    "manual_cleaning_failed_hall_t": "Manual cleaning failed: hall sensor T",
+    "manual_cleaning_terminated": "Manual cleaning terminated",
+    "manual_odor_completed": "Manual deodorization completed",
+    "manual_odor_completed_liquid_lack": "Manual deodorization completed: liquid low",
+    "manual_odor_failed": "Manual deodorization failed",
+    "periodic_cleaning_canceled": "Periodic cleaning canceled",
+    "periodic_cleaning_canceled_kitten": "Periodic cleaning canceled: kitten mode",
+    "periodic_cleaning_completed": "Periodic cleaning completed",
+    "periodic_cleaning_terminated": "Periodic cleaning terminated",
+    "periodic_odor_completed": "Periodic deodorization completed",
+    "periodic_odor_completed_liquid_lack": "Periodic deodorization completed: liquid low",
+    "periodic_odor_failed": "Periodic deodorization failed",
+    "pet_detect": "Pet detected",
+    "pet_out": "Pet out",
+    "reset_completed": "Reset completed",
+    "reset_failed_full": "Reset failed: waste bin full",
+    "reset_failed_hall_l": "Reset failed: hall sensor L",
+    "reset_failed_hall_t": "Reset failed: hall sensor T",
+    "reset_over": "Reset",
+    "reset_terminated": "Reset terminated",
+    "scheduled_cleaning_failed_full": "Scheduled cleaning failed: waste bin full",
+    "scheduled_cleaning_failed_hall_l": "Scheduled cleaning failed: hall sensor L",
+    "scheduled_cleaning_failed_hall_t": "Scheduled cleaning failed: hall sensor T",
+    "spray_over": "Deodorize",
+}
 
 
 def _safe_get(obj: Any, *attrs: str, default: Any = None) -> Any:
@@ -65,7 +116,9 @@ class PetkitNotificationManager:
         self.hass = hass
         self._coordinator = coordinator
         self._prev_litter_events: dict[int, str | None] = {}
-        self._prev_binary: dict[str, bool] = {}
+        # Uses Optional[bool] as sentinel: None = not yet seen (first pass seeds
+        # state without firing), True/False = known previous state.
+        self._prev_binary: dict[str, bool | None] = {}
         self._remove_listener = coordinator.async_add_listener(
             self._handle_coordinator_update
         )
@@ -102,11 +155,18 @@ class PetkitNotificationManager:
 
         Returns ``(rose, fell)`` where *rose* means a False→True transition
         occurred and *fell* means a True→False transition occurred.
+
+        On the first call for a given key the state is seeded without
+        reporting any transition, preventing spurious notifications on
+        HA start or integration reload.
         """
         state_key = f"{device_id}_{key}"
-        prev = self._prev_binary.get(state_key, False)
+        prev = self._prev_binary.get(state_key)
         current_bool = bool(current)
         self._prev_binary[state_key] = current_bool
+        # First observation — seed without transition
+        if prev is None:
+            return False, False
         return current_bool and not prev, not current_bool and prev
 
     # ------------------------------------------------------------------
@@ -123,10 +183,14 @@ class PetkitNotificationManager:
         if current_event and current_event != prev_event:
             self._prev_litter_events[device.id] = current_event
             if self._notif_enabled(device, "work_notify"):
+                # map_litter_event returns translation keys for most events.
+                # Look up the human-readable label; fall back to the raw key
+                # for pet-visit strings (which are already human-readable).
+                label = _LITTER_EVENT_LABELS.get(current_event, current_event)
                 self._notify(
                     f"petkit_{device.id}_litter_event",
                     f"PetKit — {_device_name(device)}",
-                    current_event,
+                    label,
                 )
 
         # --- Waste bin full ---
@@ -156,9 +220,25 @@ class PetkitNotificationManager:
             self._dismiss(f"petkit_{device.id}_sand_lack")
 
     def _check_feeder(self, device: Feeder) -> None:
-        """Check feeder food-level alerts."""
-        food_state = _safe_get(device, "state", "food")
-        food_low = food_state is not None and food_state < 2
+        """Check feeder food-level alerts.
+
+        Uses the same per-model thresholds as the food_level binary sensors:
+        - D4S / D4SH (dual hopper): alert when hopper 1 *or* hopper 2 is empty
+        - D3: alert when food level < 2 (levels 0 or 1)
+        - All other feeders: alert when food level == 0
+        """
+        if isinstance(device, (D4S, D4SH)):
+            food1 = _safe_get(device, "state", "food1")
+            food2 = _safe_get(device, "state", "food2")
+            food_low = (food1 is not None and food1 == 0) or (
+                food2 is not None and food2 == 0
+            )
+        elif isinstance(device, D3):
+            food_state = _safe_get(device, "state", "food")
+            food_low = food_state is not None and food_state < 2
+        else:
+            food_state = _safe_get(device, "state", "food")
+            food_low = food_state is not None and food_state == 0
         rose, fell = self._track_binary(device.id, "food_low", food_low)
         if rose and self._notif_enabled(device, "food_notify"):
             self._notify(
@@ -213,9 +293,8 @@ class PetkitNotificationManager:
                     self._check_feeder(device)
                 elif isinstance(device, WaterFountain):
                     self._check_fountain(device)
-            except Exception as exc:  # noqa: BLE001
-                LOGGER.warning(
-                    "PetKit: error while processing notification for device %s: %s",
+            except Exception:  # noqa: BLE001
+                LOGGER.exception(
+                    "PetKit: error while processing notification for device %s",
                     getattr(device, "id", "?"),
-                    exc,
                 )
