@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum, auto
 from pathlib import Path
 
 from go2rtc_client.ws import (
@@ -50,6 +51,24 @@ from .whep_proxy import get_whep_upstream_manager
 @dataclass(frozen=True, kw_only=True)
 class PetKitCameraDesc(PetKitDescSensorBase, CameraEntityDescription):
     """Description class for PetKit camera entities."""
+
+
+class _BrowserSessionState(Enum):
+    """Lifecycle state of a browser-to-go2rtc WebRTC session."""
+
+    PENDING = auto()
+    ACTIVE = auto()
+    CLOSED = auto()
+    FAILED = auto()
+
+
+@dataclass
+class _BrowserSession:
+    """Tracks one browser WebRTC session through its lifecycle."""
+
+    state: _BrowserSessionState
+    ws_client: Go2RtcWsClient | None = None
+    queued_candidates: list[str] = field(default_factory=list)
 
 
 CAMERA_MAPPING: dict[type[Feeder | Litter], list[PetKitCameraDesc]] = {
@@ -133,7 +152,7 @@ class PetkitWebRTCCamera(PetkitCameraBaseEntity):
         self._agora_response: AgoraResponse | None = None
         self._ice_servers: list[RTCIceServer] = []
         self._remove_ice_servers: Callable[[], None] | None = None
-        self._go2rtc_browser_sessions: dict[str, Go2RtcWsClient] = {}
+        self._go2rtc_browser_sessions: dict[str, _BrowserSession] = {}
 
     @property
     def available(self) -> bool:
@@ -319,20 +338,41 @@ class PetkitWebRTCCamera(PetkitCameraBaseEntity):
         session_id: str,
         candidate: RTCIceCandidateInit,
     ) -> None:
-        """Collect browser ICE candidates for join_v3."""
-        ws_client = self._go2rtc_browser_sessions.get(session_id)
-        if ws_client is None:
-            raise RuntimeError(
-                "Cannot handle WebRTC candidate without an active shared go2rtc session"
+        """Collect browser ICE candidates for the go2rtc session."""
+        session = self._go2rtc_browser_sessions.get(session_id)
+        if session is None:
+            LOGGER.debug("Ignoring ICE candidate for unknown session %s", session_id)
+            return
+        if session.state in (_BrowserSessionState.CLOSED, _BrowserSessionState.FAILED):
+            LOGGER.debug(
+                "Ignoring ICE candidate for %s session %s",
+                session.state.name,
+                session_id,
             )
-        await ws_client.send(Go2RTCCandidate(candidate.candidate))
+            return
+        if session.state == _BrowserSessionState.PENDING:
+            session.queued_candidates.append(candidate.candidate)
+            return
+        if session.ws_client is None:
+            LOGGER.debug(
+                "Session %s is ACTIVE but ws_client is None, marking FAILED",
+                session_id,
+            )
+            session.state = _BrowserSessionState.FAILED
+            self._go2rtc_browser_sessions.pop(session_id, None)
+            return
+        await session.ws_client.send(Go2RTCCandidate(candidate.candidate))
 
     @callback
     def close_webrtc_session(self, session_id: str) -> None:
         """Close one browser WebRTC session."""
-        ws_client = self._go2rtc_browser_sessions.pop(session_id, None)
-        if ws_client is not None:
-            self.hass.async_create_task(ws_client.close())
+        session = self._go2rtc_browser_sessions.pop(session_id, None)
+        if session is None:
+            return
+        session.state = _BrowserSessionState.CLOSED
+        session.queued_candidates.clear()
+        if session.ws_client is not None:
+            self.hass.async_create_task(session.ws_client.close())
 
     def get_ice_servers(self) -> list[RTCIceServer]:
         """Return cached Agora ICE servers for Home Assistant frontend."""
@@ -340,11 +380,15 @@ class PetkitWebRTCCamera(PetkitCameraBaseEntity):
 
     async def _async_close_stream(self, *, send_stop: bool = False) -> None:
         """Close browser WebRTC sessions and any local RTM state."""
-        go2rtc_browser_sessions = list(self._go2rtc_browser_sessions.values())
+        sessions = list(self._go2rtc_browser_sessions.values())
         self._go2rtc_browser_sessions.clear()
-        if go2rtc_browser_sessions:
+        for s in sessions:
+            s.state = _BrowserSessionState.CLOSED
+            s.queued_candidates.clear()
+        ws_clients = [s.ws_client for s in sessions if s.ws_client is not None]
+        if ws_clients:
             await asyncio.gather(
-                *(session.close() for session in go2rtc_browser_sessions),
+                *(client.close() for client in ws_clients),
                 return_exceptions=True,
             )
         try:
@@ -424,9 +468,23 @@ class PetkitWebRTCCamera(PetkitCameraBaseEntity):
             )
             return
 
+        # Register PENDING session *before* any await so that
+        # async_on_webrtc_candidate can buffer early ICE candidates.
+        existing = self._go2rtc_browser_sessions.pop(session_id, None)
+        session = _BrowserSession(state=_BrowserSessionState.PENDING)
+        self._go2rtc_browser_sessions[session_id] = session
+
+        if existing is not None:
+            existing.state = _BrowserSessionState.CLOSED
+            existing.queued_candidates.clear()
+            if existing.ws_client is not None:
+                await existing.ws_client.close()
+
         try:
             await go2rtc_manager.async_ensure_stream(self, raise_on_failure=True)
         except RuntimeError as err:
+            session.state = _BrowserSessionState.FAILED
+            self._go2rtc_browser_sessions.pop(session_id, None)
             send_message(
                 WebRTCError(
                     code="go2rtc_stream_unavailable",
@@ -435,9 +493,9 @@ class PetkitWebRTCCamera(PetkitCameraBaseEntity):
             )
             return
 
-        existing_client = self._go2rtc_browser_sessions.pop(session_id, None)
-        if existing_client is not None:
-            await existing_client.close()
+        if session.state in (_BrowserSessionState.CLOSED, _BrowserSessionState.FAILED):
+            self._go2rtc_browser_sessions.pop(session_id, None)
+            return
 
         ws_client = Go2RtcWsClient(
             go2rtc_manager.api_session(),
@@ -461,7 +519,7 @@ class PetkitWebRTCCamera(PetkitCameraBaseEntity):
                     )
 
         ws_client.subscribe(on_messages)
-        self._go2rtc_browser_sessions[session_id] = ws_client
+        session.ws_client = ws_client
 
         try:
             config = self.async_get_webrtc_client_configuration()
@@ -469,6 +527,33 @@ class PetkitWebRTCCamera(PetkitCameraBaseEntity):
                 Go2RTCOffer(offer_sdp, config.configuration.ice_servers)
             )
         except Exception as err:  # noqa: BLE001
+            session.state = _BrowserSessionState.FAILED
+            self._go2rtc_browser_sessions.pop(session_id, None)
+            await ws_client.close()
+            send_message(
+                WebRTCError(
+                    code="go2rtc_webrtc_offer_failed",
+                    message=str(err),
+                )
+            )
+            return
+
+        if session.state in (_BrowserSessionState.CLOSED, _BrowserSessionState.FAILED):
+            self._go2rtc_browser_sessions.pop(session_id, None)
+            await ws_client.close()
+            return
+
+        # Snapshot buffered candidates, transition to ACTIVE, then flush.
+        # New candidates arriving during flush go directly via ACTIVE path.
+        buffered = list(session.queued_candidates)
+        session.queued_candidates.clear()
+        session.state = _BrowserSessionState.ACTIVE
+
+        try:
+            for candidate_str in buffered:
+                await ws_client.send(Go2RTCCandidate(candidate_str))
+        except Exception as err:  # noqa: BLE001
+            session.state = _BrowserSessionState.FAILED
             self._go2rtc_browser_sessions.pop(session_id, None)
             await ws_client.close()
             send_message(
