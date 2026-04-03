@@ -64,12 +64,14 @@ class AgoraWebSocketHandler:
         subscribe_retry_attempts: int = 0,
         declare_remote_video_ssrc: bool = False,
         disable_audio_answer: bool = False,
+        on_connection_lost: Callable[[], None] | None = None,
     ) -> None:
         """Initialize runtime state."""
         self._websocket: ClientConnection | None = None
         self._connection_state = "DISCONNECTED"
         self._message_handlers: dict[str, Callable[[dict[str, Any]], Any]] = {}
         self._disconnect_task: asyncio.Task[None] | None = None
+        self._on_connection_lost = on_connection_lost
 
         self.candidates: list[RTCIceCandidateInit] = []
         self._online_users: set[int] = set()
@@ -289,6 +291,7 @@ class AgoraWebSocketHandler:
             raise
         except WebSocketException as err:
             LOGGER.warning("Agora message loop closed: %s", err)
+            self._fire_connection_lost()
         finally:
             self._connection_state = "DISCONNECTED"
 
@@ -416,6 +419,7 @@ class AgoraWebSocketHandler:
             response.get("error_str"),
         )
         self._disconnect_task = asyncio.create_task(self.disconnect())
+        self._fire_connection_lost()
 
     async def _handle_error(self, response: dict[str, Any]) -> None:
         """Handle generic Agora signaling errors."""
@@ -1165,6 +1169,12 @@ class AgoraWebSocketHandler:
     def is_connected(self) -> bool:
         """Return websocket connectivity state."""
         return self._connection_state == "CONNECTED"
+
+    def _fire_connection_lost(self) -> None:
+        """Notify the owner that the Agora connection dropped unexpectedly."""
+        if self._on_connection_lost is not None:
+            self._on_connection_lost()
+            self._on_connection_lost = None
 
     async def disconnect(self) -> None:
         """Close websocket and cancel background tasks."""

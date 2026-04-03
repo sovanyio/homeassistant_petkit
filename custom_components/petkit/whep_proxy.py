@@ -145,6 +145,12 @@ class PetkitAgoraUpstreamManager:
             await agora_rtm.update_tokens(refreshed_live_feed)
             return refreshed_live_feed.rtc_token
 
+        def _on_connection_lost() -> None:
+            self.hass.async_create_task(
+                self.close_session(device_id),
+                f"petkit upstream cleanup {device_id}",
+            )
+
         agora_handler = AgoraWebSocketHandler(
             rtc_token_provider=refresh_rtc_token,
             prefer_instant_video=True,
@@ -152,6 +158,7 @@ class PetkitAgoraUpstreamManager:
             subscribe_retry_attempts=3,
             declare_remote_video_ssrc=True,
             disable_audio_answer=True,
+            on_connection_lost=_on_connection_lost,
         )
         for line in offer_sdp.splitlines():
             stripped = line.strip()
