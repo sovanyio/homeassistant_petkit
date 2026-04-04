@@ -2,10 +2,10 @@
 
 Fires a native Home Assistant persistent notification whenever a relevant
 device event occurs (litter-box cleaning result, waste bin full, low food,
-low water, etc.).  Each notification type is gated by the corresponding
-notification switch already present on the device
-(e.g. ``work_notify``, ``litter_full_notify``) so users can opt-out of
-individual alerts directly from the integration's switch entities.
+low water, etc.). Some notification types may be controlled by the
+corresponding device notification switches when those switches are available
+(for example, ``work_notify`` or ``litter_full_notify``), allowing users to
+opt out of those specific alerts from the integration's switch entities.
 
 When a binary alert clears (e.g. the waste bin has been emptied) the
 matching persistent notification is automatically dismissed.
