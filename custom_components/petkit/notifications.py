@@ -156,16 +156,21 @@ class PetkitNotificationManager:
 
         # --- Litter box event (cleaning completed / failed, pet visit, etc.) ---
         current_event = map_litter_event(device.device_records)
-        prev_event = self._prev_litter_events.get(device.id)
-        if current_event and current_event != prev_event:
+        if device.id not in self._prev_litter_events:
             self._prev_litter_events[device.id] = current_event
-            if self._notif_enabled(device, "work_notify"):
-                label = self._translate_litter_event(current_event)
-                self._notify(
-                    f"petkit_{device.id}_litter_event",
-                    f"PetKit — {_device_name(device)}",
-                    label,
-                )
+        else:
+            prev_event = self._prev_litter_events[device.id]
+            if current_event and current_event != prev_event:
+                self._prev_litter_events[device.id] = current_event
+                if self._notif_enabled(device, "work_notify"):
+                    label = self._translate_litter_event(current_event)
+                    self._notify(
+                        f"petkit_{device.id}_litter_event",
+                        f"PetKit — {_device_name(device)}",
+                        label,
+                    )
+            elif current_event != prev_event:
+                self._prev_litter_events[device.id] = current_event
 
         # --- Waste bin full ---
         rose, fell = self._track_binary(
