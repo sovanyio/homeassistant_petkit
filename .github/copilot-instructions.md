@@ -87,7 +87,7 @@ Camera entities use WebRTC via Agora SDK or go2rtc. Supporting files: `agora_api
 ### Notifications & MQTT
 
 - `PetkitIotMqttListener` (`iot_mqtt.py`) subscribes to Petkit's IoT MQTT broker and triggers smart polling on events.
-- `PetkitNotificationManager` (`notifications.py`) handles push notifications from the API.
+- `PetkitNotificationManager` (`notifications.py`) manages Home Assistant persistent notifications based on coordinator refreshes.
 
 ## Key Conventions
 
