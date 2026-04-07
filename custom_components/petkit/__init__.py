@@ -168,7 +168,7 @@ async def async_unload_entry(
         await mqtt_listener.async_stop()
 
     await async_cleanup_whep_proxy_sessions(hass)
-    
+
     notification_manager = getattr(entry.runtime_data, "notification_manager", None)
     if notification_manager is not None:
         notification_manager.stop()
