@@ -816,7 +816,7 @@
                         "data_description": {
                             "ble_relay_enabled": "Om inaktiverad uppdateras fontänen endast när enheten uppdateras via appen."
                         },
-                        "description": "Dessa alternativ är endast effektiva om du har en fontän och minst en enhet som kan fungera som ett Bluetooth-relä (t.ex. utfodrare, kattlåda). Se Petkit-appen för mer information.",
+                        "description": "Dessa alternativ är endast effektiva om du har en fontän och minst en enhet som kan fungera som ett Bluetooth-relä (t.ex. foderautomat, kattlåda). Se Petkit-appen för mer information.",
                         "name": "Bluetooth-alternativ"
                     },
                     "medias_options": {
@@ -835,7 +835,7 @@
                             "media_path": "Sökväg där media kommer att lagras. Om ingen anges lagras media i /media-mappen i Home Assistant.",
                             "scan_interval_media": "Intervall för att ladda ned ny media (bilder och videor) från Petkits servrar."
                         },
-                        "description": "Dessa alternativ är endast effektiva om du har minst en enhet (t.ex. utfodrare, kattlåda) som kan fånga bilder & videor",
+                        "description": "Dessa alternativ är endast effektiva om du har minst en enhet (t.ex. foderautomat, kattlåda) som kan fånga bilder & videor",
                         "name": "Mediaalternativ"
                     }
                 },
