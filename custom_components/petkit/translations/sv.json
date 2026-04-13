@@ -73,7 +73,7 @@
                 "name": "Låg batterinivå"
             },
             "low_power": {
-                "name": "Ström"
+                "name": "Strömproblem"
             },
             "manually_paused": {
                 "name": "Manuellt pausad"
@@ -106,24 +106,48 @@
                 "name": "Onormalt pH-värde upptäckt"
             },
             "weight_error": {
-                "name": "Vikt felaktig"
+                "name": "Felaktig vikt"
             },
             "pet_detected": {
-                "name": "Hjusdjur dricker"
+                "name": "Husdjur dricker"
             },
             "pump_running": {
-                "name": "Pump"
+                "name": "Pump aktiv"
+            },
+            "yowling_detected": {
+                "name": "Jamande hörs"
+            },
+            "soft_stool_detected": {
+                "name": "Lös avföring upptäckt"
+            },
+            "light": {
+                "name": "Ljus"
+            },
+            "spray": {
+                "name": "Spray"
+            },
+            "n60_deodorize_presence": {
+                "name": "Status för N60-luktborttagningsmodul"
+            },
+            "deodorization_running": {
+                "name": "Luktborttagning aktiv"
+            },
+            "do_not_disturb_state": {
+                "name": "Stör ej"
+            },
+            "pet_error": {
+                "name": "Husdjursrelaterat fel"
             }
         },
         "button": {
             "action_continue": {
-                "name": "Åtgärd: Fortsätt"
+                "name": "Fortsätt"
             },
             "action_pause": {
-                "name": "Åtgärd: Paus"
+                "name": "Pausa"
             },
             "action_reset": {
-                "name": "Åtgärd: Återställ"
+                "name": "Återställ"
             },
             "call_pet": {
                 "name": "Kalla på husdjur"
@@ -138,7 +162,7 @@
                 "name": "Töm kattsand"
             },
             "exit_maintenance": {
-                "name": "Underhåll: Avsluta"
+                "name": "Avsluta underhåll"
             },
             "food_replenished": {
                 "name": "Mat påfylld"
@@ -150,13 +174,43 @@
                 "name": "Återställ luktborttagare"
             },
             "start_maintenance": {
-                "name": "Underhåll: Starta"
+                "name": "Starta underhåll"
             },
             "start_scoop": {
                 "name": "Skopa"
             },
             "reset_filter": {
                 "name": "Återställ filter"
+            },
+            "pause": {
+                "name": "Pausa"
+            },
+            "resume": {
+                "name": "Återuppta"
+            },
+            "play_sound": {
+                "name": "Spela upp ljud"
+            },
+            "reset_n50_odor_eliminator": {
+                "name": "Återställ N50-luktborttagare"
+            },
+            "reset_n60_odor_eliminator": {
+                "name": "Återställ N60-luktborttagare"
+            },
+            "level_litter": {
+                "name": "Jämna ut kattsand"
+            },
+            "ptz_left": {
+                "name": "PTZ Vänster"
+            },
+            "ptz_right": {
+                "name": "PTZ Höger"
+            },
+            "ptz_stop": {
+                "name": "PTZ Stopp"
+            },
+            "ptz_flip": {
+                "name": "PTZ Vänd"
             }
         },
         "fan": {
@@ -166,16 +220,25 @@
         },
         "image": {
             "last_eat_event": {
-                "name": "Senaste ät-event"
+                "name": "Senaste gången det åts"
             },
             "last_feed_event": {
-                "name": "Senaste matnings-event"
+                "name": "Senaste matning"
             },
             "last_toileting_event": {
                 "name": "Senaste toalettbesöket"
             },
             "last_visit_event": {
                 "name": "Senaste besöket"
+            },
+            "waste_check": {
+                "name": "Avfallskontroll"
+            },
+            "dish_before": {
+                "name": "Skål före matning"
+            },
+            "dish_after": {
+                "name": "Skål efter matning"
             }
         },
         "number": {
@@ -197,10 +260,10 @@
         },
         "select": {
             "avoid_repeat_cleaning_interval": {
-                "name": "Undvik upprepad rengöring intervall"
+                "name": "Intervall för att undvika upprepad rengöring"
             },
             "eat_detection_sensitivity": {
-                "name": "IA Ätdetekteringskänslighet"
+                "name": "AI-känslighet för ätigenkänning"
             },
             "litter_type": {
                 "name": "Kattsandstyp"
@@ -209,13 +272,16 @@
                 "name": "Rörelsedetekteringskänslighet"
             },
             "pet_detection_sensitivity": {
-                "name": "IA Husdjursdetekteringskänslighet"
+                "name": "AI-känslighet för husdjursdetektering"
             },
             "surplus_level": {
                 "name": "Överskottskontrollnivå"
             },
             "led_brightness": {
-                "name": "Led ljusstyrka"
+                "name": "LED-ljusstyrka"
+            },
+            "working_mode": {
+                "name": "Driftläge"
             }
         },
         "sensor": {
@@ -223,10 +289,10 @@
                 "name": "Renad luft"
             },
             "amount_eaten": {
-                "name": "Mängd uppäten"
+                "name": "Uppäten mängd"
             },
             "average_time": {
-                "name": "Genomsnittlig användning"
+                "name": "Genomsnittlig tid"
             },
             "avg_eating_time": {
                 "name": "Genomsnittlig ättid"
@@ -265,7 +331,7 @@
                 "name": "Foderfel"
             },
             "filter_percent": {
-                "name": "Filter kvarvarande"
+                "name": "Filter kvar (%)"
             },
             "food_bowl_percentage": {
                 "name": "Matskål fyllnadsgrad"
@@ -327,7 +393,7 @@
                     "reset_failed_full": "Återställning misslyckades: full",
                     "reset_failed_hall_l": "Återställning misslyckades: hall L",
                     "reset_failed_hall_t": "Återställning misslyckades: hall T",
-                    "reset_over": "Återställ",
+                    "reset_over": "Återställning klar",
                     "reset_terminated": "Återställning avbruten",
                     "scheduled_cleaning_failed_full": "Schemalagd rengöring misslyckades: full",
                     "scheduled_cleaning_failed_hall_l": "Schemalagd rengöring misslyckades: hall L",
@@ -428,7 +494,7 @@
                 "name": "Smart spray-batteri"
             },
             "spray_deodorant_liquid": {
-                "name": "Spraydeodorantvätska"
+                "name": "Deodorantvätska (spray)"
             },
             "times_dispensed": {
                 "name": "Antal utdelningar"
@@ -461,7 +527,7 @@
                 "name": "Totalt schemalagt fack 2"
             },
             "total_time": {
-                "name": "Total användning"
+                "name": "Total användningstid"
             },
             "battery": {
                 "name": "Batteri"
@@ -477,13 +543,47 @@
                     "expired": "Utgånget",
                     "not_available": "Inte tillgänglig",
                     "not_installed": "Inte installerad"
-                }
+                },
+                "name": "Avfallspåsbehållare"
             },
             "device_id": {
                 "name": "Enhets-ID"
             },
             "last_bag_replacement_time": {
                 "name": "Senaste påsbyte"
+            },
+            "urine_measured_ph": {
+                "name": "Uppmätt pH i urin"
+            },
+            "pet_last_urination_date": {
+                "name": "Senaste urinering"
+            },
+            "pet_last_defecation_date": {
+                "name": "Senaste avföring"
+            },
+            "battery_voltage": {
+                "name": "Batterispänning"
+            },
+            "supply_voltage": {
+                "name": "Matningsspänning"
+            },
+            "odor_eliminator_n50_left_days": {
+                "name": "Dagar kvar för N50-luktborttagare"
+            },
+            "odor_eliminator_n60_left_days": {
+                "name": "Dagar kvar för N60-luktborttagare"
+            },
+            "spray_times": {
+                "name": "Antal sprayningar"
+            },
+            "purification_n60_left_days": {
+                "name": "Dagar kvar för N60-rening"
+            },
+            "sand_tray_left_days": {
+                "name": "Dagar kvar för sandbricka"
+            },
+            "last_pack_time": {
+                "name": "Senaste påsanvändning"
             }
         },
         "switch": {
@@ -533,7 +633,7 @@
                 "name": "Matningston"
             },
             "highlight": {
-                "name": "Markeringsspårning av husdjur"
+                "name": "Markerad husdjursspårning"
             },
             "indicator_light": {
                 "name": "Indikatorlampa"
@@ -599,13 +699,13 @@
                 "name": "Överskottskontroll"
             },
             "system_notification": {
-                "name": "Systemljud"
+                "name": "Systemnotiser"
             },
             "video_timestamp": {
                 "name": "Visa tidsstämpel"
             },
             "voice_dispense": {
-                "name": "Röstutdelning"
+                "name": "Ljud vid utdelning"
             },
             "waste_covering": {
                 "name": "Avfallsöverdrag"
@@ -618,11 +718,62 @@
             },
             "periodic_deodorizing": {
                 "name": "Periodisk luktborttagning"
+            },
+            "soft_stool": {
+                "name": "AI-detektering av lös avföring"
+            },
+            "soft_stool_stop_cleaning": {
+                "name": "Stoppa rengöring vid upptäckt av lös avföring"
+            },
+            "auto_deodor": {
+                "name": "Automatisk luktborttagning"
+            },
+            "deodorant_n50_notify": {
+                "name": "Notifiering vid behov av byte av N50"
+            },
+            "deodorant_n60_notify": {
+                "name": "Notifiering vid behov av byte av N60"
+            },
+            "camera_light": {
+                "name": "Kameralampa"
+            },
+            "pet_toileting_notif": {
+                "name": "Notifiering vid toalettbesök"
+            },
+            "light_assist": {
+                "name": "Ljus vid rengöring"
+            },
+            "proximity_sensor": {
+                "name": "Sensorläge"
+            },
+            "sand_saving": {
+                "name": "Kattsandsbesparing"
+            },
+            "toilet_light": {
+                "name": "Ljus vid toalettbesök"
+            },
+            "privacy_mode": {
+                "name": "Integritetsläge"
+            },
+            "privacy_camera_off": {
+                "name": "Integritet: kamera av"
+            },
+            "privacy_camera_inward": {
+                "name": "Integritet: kamera inåt"
+            },
+            "privacy_microphone_off": {
+                "name": "Integritet: mikrofon av"
+            },
+            "ai_ph_detection": {
+                "name": "AI-detektering av pH"
+            },
+            "ai_yowling": {
+                "name": "AI-detektering av jamande"
             }
         },
         "light": {
             "light": {
-                "name": "Ljussättning"
+                "name": "Belysning"
             }
         },
         "text": {
@@ -635,6 +786,11 @@
             "manual_feed_single": {
                 "name": "Mata manuellt"
             }
+        },
+        "camera": {
+            "camera": {
+                "name": "Kamerastream"
+            }
         }
     },
     "options": {
@@ -644,10 +800,12 @@
                     "region": "Region",
                     "scan_interval": "Standard avpollningsintervall (sekunder)",
                     "smart_polling": "Smart avpollning",
-                    "time_zone": "Tidszon"
+                    "time_zone": "Tidszon",
+                    "always_on_stream": "Alltid aktiv omströmning"
                 },
                 "data_description": {
-                    "smart_polling": "Smart avpollning justerar automatiskt avpollningsintervallet baserat på enhetens händelser/åtgärder."
+                    "smart_polling": "Smart avpollning justerar automatiskt avpollningsintervallet baserat på enhetens händelser/åtgärder.",
+                    "always_on_stream": "Håll den interna omströmningen förvärmd så att webbläsarvisning, WHEP-klienter och andra klienter som använder kamerans stream kan ansluta sig snabbt. Omströmningen kan också återanvändas av andra klienter. Detta håller en uppströmsanslutning aktiv och använder mer resurser på enheten och i molnet."
                 },
                 "sections": {
                     "bluetooth_options": {
@@ -658,7 +816,7 @@
                         "data_description": {
                             "ble_relay_enabled": "Om inaktiverad uppdateras fontänen endast när enheten uppdateras via appen."
                         },
-                        "description": "Dessa alternativ är endast effektiva om du har en fontän och minst en enhet som kan fungera som ett bluetooth-relä (t.ex. utfodrare, kattlåda). Se Petkit-appen för mer information.",
+                        "description": "Dessa alternativ är endast effektiva om du har en fontän och minst en enhet som kan fungera som ett Bluetooth-relä (t.ex. utfodrare, kattlåda). Se Petkit-appen för mer information.",
                         "name": "Bluetooth-alternativ"
                     },
                     "medias_options": {
