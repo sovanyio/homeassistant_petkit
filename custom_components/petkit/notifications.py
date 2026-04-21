@@ -21,6 +21,18 @@ from pypetkitapi import D3, D4S, D4SH, Feeder, Litter, WaterFountain
 from homeassistant.components.persistent_notification import async_create, async_dismiss
 from homeassistant.helpers import translation
 
+from .const import (
+    NOTIFICATION_CAT_FEEDER_ERROR,
+    NOTIFICATION_CAT_FEEDER_FOOD_LOW,
+    NOTIFICATION_CAT_FOUNTAIN_FILTER,
+    NOTIFICATION_CAT_FOUNTAIN_WATER_LOW,
+    NOTIFICATION_CAT_LITTER_BOX_FULL,
+    NOTIFICATION_CAT_LITTER_ERROR,
+    NOTIFICATION_CAT_LITTER_EVENT,
+    NOTIFICATION_CAT_LITTER_SAND_LOW,
+    NOTIFICATION_CATEGORIES,
+)
+
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
@@ -66,8 +78,14 @@ class PetkitNotificationManager:
         self,
         hass: HomeAssistant,
         coordinator: PetkitDataUpdateCoordinator,
+        enabled_categories: list[str] | None = None,
     ) -> None:
-        """Set up the notification manager (call async_start afterwards)."""
+        """Set up the notification manager (call async_start afterwards).
+
+        ``enabled_categories`` restricts which notification categories are
+        allowed to fire a persistent notification.  A value of ``None`` means
+        all categories are enabled (backward compatible).
+        """
         self.hass = hass
         self._coordinator = coordinator
         self._prev_litter_events: dict[int, str | None] = {}
@@ -76,12 +94,17 @@ class PetkitNotificationManager:
         self._prev_binary: dict[str, bool | None] = {}
         # Loaded by async_start(); keys are full HA translation paths.
         self._translations: dict[str, str] = {}
+        self._enabled_categories: frozenset[str] = frozenset(
+            enabled_categories
+            if enabled_categories is not None
+            else NOTIFICATION_CATEGORIES
+        )
         self._remove_listener = coordinator.async_add_listener(
             self._handle_coordinator_update
         )
 
     async def async_start(self) -> None:
-        """Load HA translations for notification messages."""
+        """Load HA translations and dismiss notifications for disabled categories."""
         try:
             self._translations = await translation.async_get_translations(
                 self.hass,
@@ -91,6 +114,53 @@ class PetkitNotificationManager:
             )
         except Exception:
             LOGGER.exception("PetKit: failed to load translations for notifications")
+
+        # Dismiss any previously-shown persistent notifications for categories
+        # the user has just disabled.  Safe to call even if the notification
+        # doesn't exist (HA treats it as a no-op).
+        self._dismiss_disabled_categories()
+
+    def _dismiss_disabled_categories(self) -> None:
+        """Clean up lingering notifications for categories that are now disabled."""
+        if not self._coordinator.data:
+            return
+
+        # Map: category -> list of notification-id suffixes that it controls.
+        category_to_suffixes: dict[str, tuple[str, ...]] = {
+            NOTIFICATION_CAT_LITTER_EVENT: ("litter_event",),
+            NOTIFICATION_CAT_LITTER_BOX_FULL: ("box_full",),
+            NOTIFICATION_CAT_LITTER_SAND_LOW: ("sand_lack",),
+            NOTIFICATION_CAT_LITTER_ERROR: ("error",),
+            NOTIFICATION_CAT_FEEDER_FOOD_LOW: ("food_low",),
+            NOTIFICATION_CAT_FEEDER_ERROR: ("error",),
+            NOTIFICATION_CAT_FOUNTAIN_WATER_LOW: ("lack_warning",),
+            NOTIFICATION_CAT_FOUNTAIN_FILTER: ("filter_warning",),
+        }
+
+        device_type_categories: dict[type, set[str]] = {
+            Litter: {
+                NOTIFICATION_CAT_LITTER_EVENT,
+                NOTIFICATION_CAT_LITTER_BOX_FULL,
+                NOTIFICATION_CAT_LITTER_SAND_LOW,
+                NOTIFICATION_CAT_LITTER_ERROR,
+            },
+            Feeder: {
+                NOTIFICATION_CAT_FEEDER_FOOD_LOW,
+                NOTIFICATION_CAT_FEEDER_ERROR,
+            },
+            WaterFountain: {
+                NOTIFICATION_CAT_FOUNTAIN_WATER_LOW,
+                NOTIFICATION_CAT_FOUNTAIN_FILTER,
+            },
+        }
+
+        for device in self._coordinator.data.values():
+            for device_type, categories in device_type_categories.items():
+                if not isinstance(device, device_type):
+                    continue
+                for category in categories - self._enabled_categories:
+                    for suffix in category_to_suffixes[category]:
+                        self._dismiss(f"petkit_{device.id}_{suffix}")
 
     def stop(self) -> None:
         """Unregister the coordinator listener (call on integration unload)."""
@@ -116,6 +186,10 @@ class PetkitNotificationManager:
         if setting_attr is None:
             return True
         return bool(_safe_get(device, "settings", setting_attr, default=False))
+
+    def _category_enabled(self, category: str) -> bool:
+        """Return True if the user has enabled the given notification category."""
+        return category in self._enabled_categories
 
     def _translate_litter_event(self, key: str) -> str:
         """Return the translated label for a litter event key.
@@ -162,7 +236,9 @@ class PetkitNotificationManager:
             prev_event = self._prev_litter_events[device.id]
             if current_event and current_event != prev_event:
                 self._prev_litter_events[device.id] = current_event
-                if self._notif_enabled(device, "work_notify"):
+                if self._category_enabled(
+                    NOTIFICATION_CAT_LITTER_EVENT
+                ) and self._notif_enabled(device, "work_notify"):
                     label = self._translate_litter_event(current_event)
                     self._notify(
                         f"petkit_{device.id}_litter_event",
@@ -176,7 +252,11 @@ class PetkitNotificationManager:
         rose, fell = self._track_binary(
             device.id, "box_full", _safe_get(device, "state", "box_full")
         )
-        if rose and self._notif_enabled(device, "litter_full_notify"):
+        if (
+            rose
+            and self._category_enabled(NOTIFICATION_CAT_LITTER_BOX_FULL)
+            and self._notif_enabled(device, "litter_full_notify")
+        ):
             self._notify(
                 f"petkit_{device.id}_box_full",
                 f"PetKit — {_device_name(device)}",
@@ -189,7 +269,11 @@ class PetkitNotificationManager:
         rose, fell = self._track_binary(
             device.id, "sand_lack", _safe_get(device, "state", "sand_lack")
         )
-        if rose and self._notif_enabled(device, "lack_sand_notify"):
+        if (
+            rose
+            and self._category_enabled(NOTIFICATION_CAT_LITTER_SAND_LOW)
+            and self._notif_enabled(device, "lack_sand_notify")
+        ):
             self._notify(
                 f"petkit_{device.id}_sand_lack",
                 f"PetKit — {_device_name(device)}",
@@ -203,7 +287,7 @@ class PetkitNotificationManager:
         rose, fell = self._track_binary(
             device.id, "error", error_msg is not None and bool(error_msg)
         )
-        if rose:
+        if rose and self._category_enabled(NOTIFICATION_CAT_LITTER_ERROR):
             self._notify(
                 f"petkit_{device.id}_error",
                 f"PetKit — {_device_name(device)}",
@@ -234,7 +318,11 @@ class PetkitNotificationManager:
             food_state = _safe_get(device, "state", "food")
             food_low = food_state is not None and food_state == 0
         rose, fell = self._track_binary(device.id, "food_low", food_low)
-        if rose and self._notif_enabled(device, "food_notify"):
+        if (
+            rose
+            and self._category_enabled(NOTIFICATION_CAT_FEEDER_FOOD_LOW)
+            and self._notif_enabled(device, "food_notify")
+        ):
             self._notify(
                 f"petkit_{device.id}_food_low",
                 f"PetKit — {_device_name(device)}",
@@ -248,7 +336,7 @@ class PetkitNotificationManager:
         rose, fell = self._track_binary(
             device.id, "error", error_msg is not None and bool(error_msg)
         )
-        if rose:
+        if rose and self._category_enabled(NOTIFICATION_CAT_FEEDER_ERROR):
             self._notify(
                 f"petkit_{device.id}_error",
                 f"PetKit — {_device_name(device)}",
@@ -263,7 +351,11 @@ class PetkitNotificationManager:
         rose, fell = self._track_binary(
             device.id, "lack_warning", _safe_get(device, "lack_warning")
         )
-        if rose and self._notif_enabled(device, "lack_liquid_notify"):
+        if (
+            rose
+            and self._category_enabled(NOTIFICATION_CAT_FOUNTAIN_WATER_LOW)
+            and self._notif_enabled(device, "lack_liquid_notify")
+        ):
             self._notify(
                 f"petkit_{device.id}_lack_warning",
                 f"PetKit — {_device_name(device)}",
@@ -276,7 +368,7 @@ class PetkitNotificationManager:
         rose, fell = self._track_binary(
             device.id, "filter_warning", _safe_get(device, "filter_warning")
         )
-        if rose:
+        if rose and self._category_enabled(NOTIFICATION_CAT_FOUNTAIN_FILTER):
             self._notify(
                 f"petkit_{device.id}_filter_warning",
                 f"PetKit — {_device_name(device)}",
