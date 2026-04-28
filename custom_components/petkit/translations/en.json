@@ -819,9 +819,9 @@
               "enabled_notifications": "Enabled notifications"
             },
             "data_description": {
-              "enabled_notifications": "Select which PetKit events should raise a Home Assistant persistent notification. Uncheck a category to silence it. Device-side notification switches (e.g. work_notify, food_notify) still apply on top of this filter."
+              "enabled_notifications": "Select which PetKit events should raise a Home Assistant persistent notification. Uncheck a category to silence it in Home Assistant. These categories are independent from the device-side notification switches in the Petkit app."
             },
-            "description": "Control which PetKit device events raise a Home Assistant persistent notification.",
+            "description": "Control which PetKit device events raise a Home Assistant persistent notification independently from the Petkit app settings.",
             "name": "Notifications"
           }
         },

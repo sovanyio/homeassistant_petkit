@@ -819,9 +819,9 @@
               "enabled_notifications": "Ingeschakelde meldingen"
             },
             "data_description": {
-              "enabled_notifications": "Selecteer welke PetKit-gebeurtenissen een persistente Home Assistant-melding moeten tonen. Vink een categorie uit om deze te onderdrukken. Meldingsschakelaars op het apparaat zelf (zoals work_notify, food_notify) blijven daarnaast van toepassing."
+              "enabled_notifications": "Selecteer welke PetKit-gebeurtenissen een persistente Home Assistant-melding moeten tonen. Vink een categorie uit om deze alleen in Home Assistant te onderdrukken. Deze categorieen staan los van de meldingsschakelaars in de Petkit-app."
             },
-            "description": "Bepaal welke PetKit-apparaatgebeurtenissen een persistente melding in Home Assistant tonen.",
+            "description": "Bepaal welke PetKit-apparaatgebeurtenissen onafhankelijk van de Petkit-app een persistente melding in Home Assistant tonen.",
             "name": "Meldingen"
           }
         },

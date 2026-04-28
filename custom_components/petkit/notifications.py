@@ -2,10 +2,9 @@
 
 Fires a native Home Assistant persistent notification whenever a relevant
 device event occurs (litter-box cleaning result, waste bin full, low food,
-low water, etc.). Some notification types may be controlled by the
-corresponding device notification switches when those switches are available
-(for example, ``work_notify`` or ``litter_full_notify``), allowing users to
-opt out of those specific alerts from the integration's switch entities.
+low water, etc.). HA notification categories are managed independently from
+the Petkit app/device notification switches so each endpoint can be enabled
+or silenced without affecting the other.
 
 When a binary alert clears (e.g. the waste bin has been emptied) the
 matching persistent notification is automatically dismissed.
@@ -181,12 +180,6 @@ class PetkitNotificationManager:
     def _dismiss(self, notification_id: str) -> None:
         async_dismiss(self.hass, notification_id)
 
-    def _notif_enabled(self, device: Any, setting_attr: str | None) -> bool:
-        """Return True when the device's notification switch is enabled (or always if None)."""
-        if setting_attr is None:
-            return True
-        return bool(_safe_get(device, "settings", setting_attr, default=False))
-
     def _category_enabled(self, category: str) -> bool:
         """Return True if the user has enabled the given notification category."""
         return category in self._enabled_categories
@@ -236,9 +229,7 @@ class PetkitNotificationManager:
             prev_event = self._prev_litter_events[device.id]
             if current_event and current_event != prev_event:
                 self._prev_litter_events[device.id] = current_event
-                if self._category_enabled(
-                    NOTIFICATION_CAT_LITTER_EVENT
-                ) and self._notif_enabled(device, "work_notify"):
+                if self._category_enabled(NOTIFICATION_CAT_LITTER_EVENT):
                     label = self._translate_litter_event(current_event)
                     self._notify(
                         f"petkit_{device.id}_litter_event",
@@ -255,7 +246,6 @@ class PetkitNotificationManager:
         if (
             rose
             and self._category_enabled(NOTIFICATION_CAT_LITTER_BOX_FULL)
-            and self._notif_enabled(device, "litter_full_notify")
         ):
             self._notify(
                 f"petkit_{device.id}_box_full",
@@ -272,7 +262,6 @@ class PetkitNotificationManager:
         if (
             rose
             and self._category_enabled(NOTIFICATION_CAT_LITTER_SAND_LOW)
-            and self._notif_enabled(device, "lack_sand_notify")
         ):
             self._notify(
                 f"petkit_{device.id}_sand_lack",
@@ -321,7 +310,6 @@ class PetkitNotificationManager:
         if (
             rose
             and self._category_enabled(NOTIFICATION_CAT_FEEDER_FOOD_LOW)
-            and self._notif_enabled(device, "food_notify")
         ):
             self._notify(
                 f"petkit_{device.id}_food_low",
@@ -354,7 +342,6 @@ class PetkitNotificationManager:
         if (
             rose
             and self._category_enabled(NOTIFICATION_CAT_FOUNTAIN_WATER_LOW)
-            and self._notif_enabled(device, "lack_liquid_notify")
         ):
             self._notify(
                 f"petkit_{device.id}_lack_warning",
