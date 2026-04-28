@@ -243,10 +243,7 @@ class PetkitNotificationManager:
         rose, fell = self._track_binary(
             device.id, "box_full", _safe_get(device, "state", "box_full")
         )
-        if (
-            rose
-            and self._category_enabled(NOTIFICATION_CAT_LITTER_BOX_FULL)
-        ):
+        if rose and self._category_enabled(NOTIFICATION_CAT_LITTER_BOX_FULL):
             self._notify(
                 f"petkit_{device.id}_box_full",
                 f"PetKit — {_device_name(device)}",
@@ -259,10 +256,7 @@ class PetkitNotificationManager:
         rose, fell = self._track_binary(
             device.id, "sand_lack", _safe_get(device, "state", "sand_lack")
         )
-        if (
-            rose
-            and self._category_enabled(NOTIFICATION_CAT_LITTER_SAND_LOW)
-        ):
+        if rose and self._category_enabled(NOTIFICATION_CAT_LITTER_SAND_LOW):
             self._notify(
                 f"petkit_{device.id}_sand_lack",
                 f"PetKit — {_device_name(device)}",
@@ -307,10 +301,7 @@ class PetkitNotificationManager:
             food_state = _safe_get(device, "state", "food")
             food_low = food_state is not None and food_state == 0
         rose, fell = self._track_binary(device.id, "food_low", food_low)
-        if (
-            rose
-            and self._category_enabled(NOTIFICATION_CAT_FEEDER_FOOD_LOW)
-        ):
+        if rose and self._category_enabled(NOTIFICATION_CAT_FEEDER_FOOD_LOW):
             self._notify(
                 f"petkit_{device.id}_food_low",
                 f"PetKit — {_device_name(device)}",
@@ -339,10 +330,7 @@ class PetkitNotificationManager:
         rose, fell = self._track_binary(
             device.id, "lack_warning", _safe_get(device, "lack_warning")
         )
-        if (
-            rose
-            and self._category_enabled(NOTIFICATION_CAT_FOUNTAIN_WATER_LOW)
-        ):
+        if rose and self._category_enabled(NOTIFICATION_CAT_FOUNTAIN_WATER_LOW):
             self._notify(
                 f"petkit_{device.id}_lack_warning",
                 f"PetKit — {_device_name(device)}",
