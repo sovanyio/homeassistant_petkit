@@ -18,7 +18,7 @@
           "time_zone": "This field is automatically completed based on your Home Assistant configuration. If you have a different timezone, please select it from the list.",
           "username": "Enter your PetKit account email, or id if you are a Chinese user"
         },
-        "description": "Please enter your PetKit account details. DO NOT use the same account that you use in the PetKit app on your smartphone. Refer to the documentation for more information."
+        "description": "Enter the PetKit account that Home Assistant will use to talk to PetKit's cloud.\n\n**Important:** this must be a *separate* PetKit account from the one you sign in to the mobile app with. PetKit only allows one active session per account, so signing in here with your main account will log you out of the app (and vice versa).\n\n**Setup:**\n1. Create a second PetKit account (different email).\n2. In the PetKit mobile app, signed in as your main account, open **Family Management** and create a family.\n3. Invite the second account as a family member and accept the invite.\n4. Enter the second account's credentials below.\n\nFull guide: [Configuration wiki](https://github.com/Jezza34000/homeassistant_petkit/wiki/Configuration)."
       }
     }
   },
