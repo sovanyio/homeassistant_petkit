@@ -316,6 +316,9 @@ class PetkitFlowHandler(ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(data_schema),
             errors=_errors,
+            description_placeholders={
+                "wiki_url": "https://github.com/Jezza34000/homeassistant_petkit/wiki/Configuration"
+            },
         )
 
     async def _test_credentials(
