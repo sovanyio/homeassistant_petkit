@@ -1,0 +1,52 @@
+blueprint:
+  name: "PetKit fountain: no drinks alert"
+  description: >
+    Fires when the fountain's *Pet drinking* binary sensor has stayed `off`
+    continuously for the configured number of hours. Useful for catching a
+    pet who has stopped drinking.
+
+
+    Pick what should happen via the *Action* input. Defaults to a persistent
+    notification in HA.
+  domain: automation
+  source_url: https://github.com/Jezza34000/homeassistant_petkit/blob/main/blueprints/automation/petkit/fountain_no_drinks_alert.yaml
+  input:
+    pet_drinking_sensor:
+      name: Pet drinking sensor
+      description: The fountain's "Pet drinking" binary sensor.
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              device_class: occupancy
+    hours_threshold:
+      name: Hours without drinking
+      description: How long the sensor must stay `off` before the alert fires.
+      default: 12
+      selector:
+        number:
+          min: 1
+          max: 48
+          step: 1
+          unit_of_measurement: h
+    alert_action:
+      name: Action
+      description: What to do when the alert fires.
+      default:
+        - service: persistent_notification.create
+          data:
+            title: "Fountain: no drinks detected"
+            message: "Pet hasn't been at the fountain for the configured threshold. Worth checking on them."
+      selector:
+        action:
+
+mode: single
+
+trigger:
+  - platform: state
+    entity_id: !input pet_drinking_sensor
+    to: "off"
+    for:
+      hours: !input hours_threshold
+
+action: !input alert_action
