@@ -98,7 +98,7 @@ BUTTON_MAPPING: dict[type[PetkitDevices], list[PetKitButtonDesc]] = {
             action=lambda api, device: api.send_api_request(
                 device.id, FeederCommand.PLAY_SOUND, device.settings.selected_sound
             ),
-            only_for_types=[D3, D4H, D4SH],
+            only_for_types=[D4H, D4SH],
         ),
     ],
     Litter: [
@@ -195,15 +195,26 @@ BUTTON_MAPPING: dict[type[PetkitDevices], list[PetKitButtonDesc]] = {
             is_available=lambda device: device.state.work_state is not None,
         ),
         PetKitButtonDesc(
-            # For T3/T4 only
-            key="Deodorize T3 T4",
+            # For T3 only
+            key="Deodorize T3",
             translation_key="deodorize",
             action=lambda api, device: api.send_api_request(
                 device.id,
                 DeviceCommand.CONTROL_DEVICE,
                 {DeviceAction.START: LBCommand.ODOR_REMOVAL},
             ),
-            only_for_types=[T3, T4],
+            force_add=[T3],
+        ),
+        PetKitButtonDesc(
+            # For T4 only
+            key="Deodorize T4",
+            translation_key="deodorize",
+            action=lambda api, device: api.send_api_request(
+                device.id,
+                DeviceCommand.CONTROL_DEVICE,
+                {DeviceAction.START: LBCommand.ODOR_REMOVAL},
+            ),
+            only_for_types=[T4],
             value=lambda device: device.k3_device,
         ),
         PetKitButtonDesc(
