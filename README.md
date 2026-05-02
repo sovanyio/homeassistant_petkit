@@ -12,6 +12,7 @@
 - 🖼️ **Media** Browse and access photos & videos captured by your devices directly in the HA `Media` section.
 - 📹 **Live Stream** Watch live video from camera-equipped devices inside Home Assistant. (⚠ Firefox not supported.)
 - 🔔 **Notifications** Receive persistent notifications in Home Assistant just like in the official Petkit app (low food, filter alerts, and more.)
+- ⚡ **Real-time updates** Direct MQTT connection to Petkit’s servers for instant device updates.
 
 ## 📘 Integration Wiki
 
