@@ -16,6 +16,26 @@ AGORA_APP_ID = "244c49951296440cbc1e3b937bf5e410"
 # Configuration
 CONF_SCAN_INTERVAL_MEDIA = "scan_interval_media"
 
+ADVANCED_SECTION = "advanced_options"
+
+# PetKit publishes the country to gateway mapping at this URL. We use it
+# during config flow to show users a short list of regional servers (~5)
+# instead of a 200+ country dropdown. If the call fails we fall back to the
+# country list below.
+PETKIT_REGION_SERVERS_URL = "https://passport.petkt.com/v1/regionservers"
+
+# Friendly English labels for the real PetKit gateways. Keys must match the
+# `gateway` field returned by /v1/regionservers verbatim. The Chinese
+# gateway is included even though the regionservers endpoint omits it,
+# since pypetkitapi reaches that cloud through a separate code path.
+PETKIT_SERVER_LABELS = {
+    "https://api.eu-pet.com/latest/": "Europe",
+    "https://api.petkt.com/latest/": "International (Americas, global)",
+    "https://api.petktasia.com/latest/": "Asia",
+    "https://api-ru.petkit.cn/latest/": "Russia",
+    "https://api.petkit.cn/6/": "China",
+}
+
 BT_SECTION = "bluetooth_options"
 CONF_BLE_RELAY_ENABLED = "ble_relay_enabled"
 CONF_SCAN_INTERVAL_BLUETOOTH = "scan_interval_bluetooth"
