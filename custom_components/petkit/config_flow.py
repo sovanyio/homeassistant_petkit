@@ -122,9 +122,7 @@ async def _fetch_petkit_servers(
         servers.append(
             {
                 "gateway": "https://api.petkit.cn/6/",
-                "label": PETKIT_SERVER_LABELS.get(
-                    "https://api.petkit.cn/6/", "China"
-                ),
+                "label": PETKIT_SERVER_LABELS.get("https://api.petkit.cn/6/", "China"),
                 "country": "CN",
                 "countries": ["CN"],
             }
@@ -306,9 +304,7 @@ class PetkitFlowHandler(ConfigFlow, domain=DOMAIN):
             # Accept either dropdown shape: server-mode delivers an ISO code
             # already, country-mode delivers a country name we look up.
             user_region = (
-                COUNTRY_TO_CODE_DICT.get(raw_region)
-                or raw_region
-                or country_from_ha
+                COUNTRY_TO_CODE_DICT.get(raw_region) or raw_region or country_from_ha
             )
             user_timezone = advanced.get(CONF_TIME_ZONE) or tz_from_ha
 
@@ -401,9 +397,9 @@ class PetkitFlowHandler(ConfigFlow, domain=DOMAIN):
         else:
             # API unreachable: keep the legacy 200-country dropdown so users
             # can still complete setup manually.
-            region_default = prev_advanced.get(
-                CONF_REGION
-            ) or CODE_TO_COUNTRY_DICT.get(country_from_ha, country_from_ha)
+            region_default = prev_advanced.get(CONF_REGION) or CODE_TO_COUNTRY_DICT.get(
+                country_from_ha, country_from_ha
+            )
             region_selector = selector.SelectSelector(
                 selector.SelectSelectorConfig(
                     options=sorted(CODE_TO_COUNTRY_DICT.values())
