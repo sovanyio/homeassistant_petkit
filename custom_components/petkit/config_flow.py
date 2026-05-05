@@ -246,21 +246,27 @@ class PetkitFlowHandler(ConfigFlow, domain=DOMAIN):
                     PetkitRegionalServerNotFoundError,
                 ) as exception:
                     LOGGER.error(exception)
-                    _errors["base"] = str(exception)
+                    _errors["base"] = "connection"
                 except PypetkitError as exception:
                     LOGGER.error(exception)
-                    _errors["base"] = "error"
+                    _errors["base"] = "unknown"
                 else:
                     return self.async_create_entry(
                         title=user_input[CONF_USERNAME],
-                        data=user_input,
+                        data={
+                            **user_input,
+                            CONF_REGION: user_region,
+                            CONF_TIME_ZONE: user_input.get(
+                                CONF_TIME_ZONE, tz_from_ha
+                            ),
+                        },
                         options={
                             MEDIA_SECTION: {
                                 CONF_MEDIA_PATH: DEFAULT_MEDIA_PATH,
                                 CONF_SCAN_INTERVAL_MEDIA: DEFAULT_SCAN_INTERVAL_MEDIA,
                                 CONF_MEDIA_DL_IMAGE: DEFAULT_DL_IMAGE,
                                 CONF_MEDIA_DL_VIDEO: DEFAULT_DL_VIDEO,
-                                CONF_MEDIA_EV_TYPE: DEFAULT_EVENTS,
+                                CONF_MEDIA_EV_TYPE: list(DEFAULT_EVENTS),
                                 CONF_DELETE_AFTER: DEFAULT_DELETE_AFTER,
                             },
                             BT_SECTION: {

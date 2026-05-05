@@ -69,7 +69,8 @@ class PetkitDataUpdateCoordinator(DataUpdateCoordinator):
         )
         self.config_entry = config_entry
         self.previous_devices = set()
-        self.curent_devices = set()
+        self.previous_device_identifiers = {}
+        self.current_devices = set()
         self.fast_poll_tic = 0
         self.mqtt_connected = False
 
@@ -120,21 +121,29 @@ class PetkitDataUpdateCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(exception) from exception
         else:
             data = self.config_entry.runtime_data.client.petkit_entities
+            previous_devices = self.previous_devices
+            previous_identifiers = self.previous_device_identifiers
             self.current_devices = set(data)
+            self.previous_device_identifiers = {
+                device_id: str(getattr(device, "sn", device_id))
+                for device_id, device in data.items()
+            }
 
             # Check if there are any stale devices
-            if stale_devices := self.previous_devices - self.current_devices:
+            if stale_devices := previous_devices - self.current_devices:
                 device_registry = dr.async_get(self.hass)
                 for device_id in stale_devices:
                     device = device_registry.async_get(
-                        identifiers={(DOMAIN, device_id)}
+                        identifiers={
+                            (DOMAIN, previous_identifiers.get(device_id, device_id))
+                        }
                     )
                     if device:
                         device_registry.async_update_device(
                             device_id=device.id,
                             remove_config_entry_id=self.config_entry.entry_id,
                         )
-                self.previous_devices = self.current_devices
+            self.previous_devices = self.current_devices
             return data
 
 
