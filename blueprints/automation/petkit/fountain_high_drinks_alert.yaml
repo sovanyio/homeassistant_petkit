@@ -1,0 +1,78 @@
+blueprint:
+  name: "PetKit fountain: high drinks alert"
+  description: >
+    Fires once a day at the configured check time if today's drink count is
+    above a percentage of the 7-day median. Higher-than-usual intake can
+    indicate heat stress, illness, or simply fresh water. Useful as an early
+    signal worth investigating.
+
+
+    Requires the package's median sensor (default
+    `sensor.petkit_fountain_drinks_median`). The first 7 days are a
+    calibration period; alerts will be noisy or wrong until enough history
+    is collected.
+  domain: automation
+  source_url: https://github.com/Jezza34000/homeassistant_petkit/blob/main/blueprints/automation/petkit/fountain_high_drinks_alert.yaml
+  input:
+    drinks_today_sensor:
+      name: Drinks today sensor
+      description: Sensor tracking today's drink count.
+      default: sensor.petkit_fountain_drinks_today
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+    median_sensor:
+      name: 7-day median sensor
+      description: Statistics sensor with the 7-day drink-count median.
+      default: sensor.petkit_fountain_drinks_median
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+    threshold_pct:
+      name: Threshold (% of median)
+      description: Trigger if today's count is above this percentage of the median.
+      default: 200
+      selector:
+        number:
+          min: 110
+          max: 500
+          step: 10
+          unit_of_measurement: "%"
+    check_time:
+      name: Check time
+      description: Time of day to evaluate. Defaults to 20:00, late enough that most of the day's drinking pattern is clear.
+      default: "20:00:00"
+      selector:
+        time:
+    alert_action:
+      name: Action
+      description: What to do when the alert fires.
+      default:
+        - service: persistent_notification.create
+          data:
+            title: "Fountain: high drinks today"
+            message: "Today's drink count is well above the 7-day median. Check for heat or illness."
+      selector:
+        action:
+
+mode: single
+
+variables:
+  drinks_today_sensor: !input drinks_today_sensor
+  median_sensor: !input median_sensor
+  threshold_pct: !input threshold_pct
+
+trigger:
+  - platform: time
+    at: !input check_time
+
+condition:
+  - condition: template
+    value_template: >
+      {% set today = states(drinks_today_sensor) | float(0) %}
+      {% set median = states(median_sensor) | float(0) %}
+      {{ median > 0 and (today / median * 100) > threshold_pct }}
+
+action: !input alert_action
