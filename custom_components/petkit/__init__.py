@@ -39,8 +39,8 @@ from .const import (
     DEFAULT_DELETE_AFTER,
     DEFAULT_DL_IMAGE,
     DEFAULT_DL_VIDEO,
-    DEFAULT_EVENTS,
     DEFAULT_ENABLED_NOTIFICATIONS,
+    DEFAULT_EVENTS,
     DEFAULT_MEDIA_PATH,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL_BLUETOOTH,
@@ -357,9 +357,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: PetkitConfigEntry) -> 
         new_options[MEDIA_SECTION] = media_section
 
         bluetooth_section = dict(new_options.get(BT_SECTION, {}))
-        bluetooth_section.setdefault(
-            CONF_BLE_RELAY_ENABLED, DEFAULT_BLUETOOTH_RELAY
-        )
+        bluetooth_section.setdefault(CONF_BLE_RELAY_ENABLED, DEFAULT_BLUETOOTH_RELAY)
         bluetooth_section.setdefault(
             CONF_SCAN_INTERVAL_BLUETOOTH, DEFAULT_SCAN_INTERVAL_BLUETOOTH
         )

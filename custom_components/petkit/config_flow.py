@@ -256,9 +256,7 @@ class PetkitFlowHandler(ConfigFlow, domain=DOMAIN):
                         data={
                             **user_input,
                             CONF_REGION: user_region,
-                            CONF_TIME_ZONE: user_input.get(
-                                CONF_TIME_ZONE, tz_from_ha
-                            ),
+                            CONF_TIME_ZONE: user_input.get(CONF_TIME_ZONE, tz_from_ha),
                         },
                         options={
                             MEDIA_SECTION: {
