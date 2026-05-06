@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from pypetkitapi import (
@@ -143,10 +143,8 @@ COMMON_ENTITIES = [
         value=lambda device: max(
             0,
             (
-                datetime.fromtimestamp(
-                    device.cloud_product.work_indate, tz=timezone.utc
-                )
-                - datetime.now(timezone.utc)
+                datetime.fromtimestamp(device.cloud_product.work_indate, tz=UTC)
+                - datetime.now(UTC)
             ).days,
         ),
     ),
@@ -505,9 +503,7 @@ SENSOR_MAPPING: dict[type[PetkitDevices], list[PetKitSensorDesc]] = {
             entity_category=EntityCategory.DIAGNOSTIC,
             device_class=SensorDeviceClass.TIMESTAMP,
             value=lambda device: (
-                datetime.fromtimestamp(
-                    int(device.package_info.package_record), tz=timezone.utc
-                )
+                datetime.fromtimestamp(int(device.package_info.package_record), tz=UTC)
                 if device.package_info
                 and device.package_info.package_record
                 and device.package_info.package_record != "-1"
@@ -522,9 +518,7 @@ SENSOR_MAPPING: dict[type[PetkitDevices], list[PetKitSensorDesc]] = {
             entity_category=EntityCategory.DIAGNOSTIC,
             device_class=SensorDeviceClass.TIMESTAMP,
             value=lambda device: (
-                datetime.fromtimestamp(
-                    int(device.package_info.package_changed), tz=timezone.utc
-                )
+                datetime.fromtimestamp(int(device.package_info.package_changed), tz=UTC)
                 if device.package_info
                 and device.package_info.package_changed
                 and device.package_info.package_changed != "-1"

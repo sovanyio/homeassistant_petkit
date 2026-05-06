@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from copy import deepcopy
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 import shutil
 from typing import Any
@@ -327,7 +327,7 @@ class PetkitBluetoothUpdateCoordinator(DataUpdateCoordinator):
                 device_id
             )
             LOGGER.debug("Bluetooth connection for device id = %s is OK", device_id)
-            self.last_update_timestamps[device_id] = datetime.now(timezone.utc)
+            self.last_update_timestamps[device_id] = datetime.now(UTC)
             return True
         LOGGER.debug("Bluetooth connection for device id = %s failed", device_id)
         return False
