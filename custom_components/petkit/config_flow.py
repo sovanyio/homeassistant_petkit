@@ -337,5 +337,5 @@ class PetkitFlowHandler(ConfigFlow, domain=DOMAIN):
             timezone=timezone,
             session=async_get_clientsession(self.hass),
         )
-        LOGGER.debug(f"Testing credentials for {username}")
+        LOGGER.debug("Testing credentials for %s", username)
         await client.login()

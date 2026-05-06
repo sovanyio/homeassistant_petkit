@@ -6,6 +6,12 @@ preview = false
 exclude = []
 keep = []
 
+[project]
+name = "homeassistant-petkit"
+version = "1.25.0"
+requires-python = ">=3.12"
+dependencies = []
+
 [project.urls]
 "Homepage" = "https://github.com/Jezza34000/homeassistant_petkit"
 "Source Code" = "https://github.com/Jezza34000/homeassistant_petkit/tree/main"
