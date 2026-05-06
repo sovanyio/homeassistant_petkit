@@ -409,6 +409,8 @@ class PetkitButton(PetkitEntity, ButtonEntity):
         """Only make available if device is online."""
 
         device_data = self.coordinator.data.get(self.device.id)
+        if device_data is None:
+            return False
         try:
             if device_data.state.pim not in POWER_ONLINE_STATE:
                 return False

@@ -110,6 +110,7 @@ NUMBER_MAPPING: dict[type[PetkitDevices], list[PetKitNumberDesc]] = {
             native_min_value=0,
             native_max_value=400,
             native_step=20,
+            native_unit_of_measurement=UnitOfMass.GRAMS,
             device_class=NumberDeviceClass.WEIGHT,
             mode=NumberMode.SLIDER,
             native_value=lambda device: 0,
@@ -140,14 +141,14 @@ NUMBER_MAPPING: dict[type[PetkitDevices], list[PetKitNumberDesc]] = {
             key="Cleaning Delay",
             translation_key="cleaning_delay",
             entity_category=EntityCategory.CONFIG,
-            native_min_value=1200,
-            native_max_value=3600,
-            native_step=60,
+            native_min_value=20,
+            native_max_value=60,
+            native_step=1,
             native_unit_of_measurement=UnitOfTime.MINUTES,
             mode=NumberMode.SLIDER,
-            native_value=lambda device: device.settings.still_time,
+            native_value=lambda device: device.settings.still_time / 60,
             action=lambda api, device, value: api.send_api_request(
-                device.id, DeviceCommand.UPDATE_SETTING, {"stillTime": int(value)}
+                device.id, DeviceCommand.UPDATE_SETTING, {"stillTime": int(value * 60)}
             ),
             only_for_types=[T7],
         ),

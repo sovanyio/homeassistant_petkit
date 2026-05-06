@@ -23,14 +23,28 @@ from homeassistant.loader import async_get_loaded_integration
 
 from .const import (
     BT_SECTION,
+    CONF_BLE_RELAY_ENABLED,
+    CONF_DELETE_AFTER,
     CONF_ENABLED_NOTIFICATIONS,
+    CONF_MEDIA_DL_IMAGE,
+    CONF_MEDIA_DL_VIDEO,
+    CONF_MEDIA_EV_TYPE,
+    CONF_MEDIA_PATH,
     CONF_SCAN_INTERVAL_BLUETOOTH,
     CONF_SCAN_INTERVAL_MEDIA,
     COORDINATOR,
     COORDINATOR_BLUETOOTH,
     COORDINATOR_MEDIA,
+    DEFAULT_BLUETOOTH_RELAY,
+    DEFAULT_DELETE_AFTER,
+    DEFAULT_DL_IMAGE,
+    DEFAULT_DL_VIDEO,
     DEFAULT_ENABLED_NOTIFICATIONS,
+    DEFAULT_EVENTS,
+    DEFAULT_MEDIA_PATH,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL_BLUETOOTH,
+    DEFAULT_SCAN_INTERVAL_MEDIA,
     DOMAIN,
     LOGGER,
     MEDIA_SECTION,
@@ -207,7 +221,10 @@ async def async_setup_entry(
         logger=LOGGER,
         name=f"{DOMAIN}.medias",
         update_interval=timedelta(
-            minutes=entry.options[MEDIA_SECTION][CONF_SCAN_INTERVAL_MEDIA]
+            minutes=entry.options.get(MEDIA_SECTION, {}).get(
+                CONF_SCAN_INTERVAL_MEDIA,
+                DEFAULT_SCAN_INTERVAL_MEDIA,
+            )
         ),
         config_entry=entry,
         data_coordinator=coordinator,
@@ -217,7 +234,10 @@ async def async_setup_entry(
         logger=LOGGER,
         name=f"{DOMAIN}.bluetooth",
         update_interval=timedelta(
-            minutes=entry.options[BT_SECTION][CONF_SCAN_INTERVAL_BLUETOOTH]
+            minutes=entry.options.get(BT_SECTION, {}).get(
+                CONF_SCAN_INTERVAL_BLUETOOTH,
+                DEFAULT_SCAN_INTERVAL_BLUETOOTH,
+            )
         ),
         config_entry=entry,
         data_coordinator=coordinator,
@@ -270,8 +290,8 @@ async def async_setup_entry(
         hass.data[DOMAIN] = {}
 
     hass.data[DOMAIN][COORDINATOR] = coordinator
-    hass.data[DOMAIN][COORDINATOR_MEDIA] = coordinator
-    hass.data[DOMAIN][COORDINATOR_BLUETOOTH] = coordinator
+    hass.data[DOMAIN][COORDINATOR_MEDIA] = coordinator_media
+    hass.data[DOMAIN][COORDINATOR_BLUETOOTH] = coordinator_bluetooth
 
     # Register services (idempotent — only registers once per domain)
     if not hass.services.has_service(DOMAIN, SERVICE_SET_FEEDING_SCHEDULE):
@@ -327,6 +347,22 @@ async def async_migrate_entry(hass: HomeAssistant, entry: PetkitConfigEntry) -> 
 
     if entry.version < 8:
         new_options = dict(entry.options)
+        media_section = dict(new_options.get(MEDIA_SECTION, {}))
+        media_section.setdefault(CONF_MEDIA_PATH, DEFAULT_MEDIA_PATH)
+        media_section.setdefault(CONF_SCAN_INTERVAL_MEDIA, DEFAULT_SCAN_INTERVAL_MEDIA)
+        media_section.setdefault(CONF_MEDIA_DL_IMAGE, DEFAULT_DL_IMAGE)
+        media_section.setdefault(CONF_MEDIA_DL_VIDEO, DEFAULT_DL_VIDEO)
+        media_section.setdefault(CONF_MEDIA_EV_TYPE, DEFAULT_EVENTS)
+        media_section.setdefault(CONF_DELETE_AFTER, DEFAULT_DELETE_AFTER)
+        new_options[MEDIA_SECTION] = media_section
+
+        bluetooth_section = dict(new_options.get(BT_SECTION, {}))
+        bluetooth_section.setdefault(CONF_BLE_RELAY_ENABLED, DEFAULT_BLUETOOTH_RELAY)
+        bluetooth_section.setdefault(
+            CONF_SCAN_INTERVAL_BLUETOOTH, DEFAULT_SCAN_INTERVAL_BLUETOOTH
+        )
+        new_options[BT_SECTION] = bluetooth_section
+
         section = dict(new_options.get(NOTIFICATION_SECTION, {}))
         section.setdefault(
             CONF_ENABLED_NOTIFICATIONS, list(DEFAULT_ENABLED_NOTIFICATIONS)
