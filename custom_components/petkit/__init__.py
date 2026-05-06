@@ -352,7 +352,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: PetkitConfigEntry) -> 
         media_section.setdefault(CONF_SCAN_INTERVAL_MEDIA, DEFAULT_SCAN_INTERVAL_MEDIA)
         media_section.setdefault(CONF_MEDIA_DL_IMAGE, DEFAULT_DL_IMAGE)
         media_section.setdefault(CONF_MEDIA_DL_VIDEO, DEFAULT_DL_VIDEO)
-        media_section.setdefault(CONF_MEDIA_EV_TYPE, list(DEFAULT_EVENTS))
+        media_section.setdefault(CONF_MEDIA_EV_TYPE, DEFAULT_EVENTS)
         media_section.setdefault(CONF_DELETE_AFTER, DEFAULT_DELETE_AFTER)
         new_options[MEDIA_SECTION] = media_section
 
