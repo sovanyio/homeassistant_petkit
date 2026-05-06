@@ -3,7 +3,12 @@
     "error": {
       "account_exists": "This account already exists.",
       "connection": "Unable to connect to the server.",
-      "unknown": "Unknown error occurred, please check the logs."
+      "unknown": "Unknown error occurred, please check the logs.",
+      "invalid_auth": "Invalid email or password",
+      "invalid_region": "No account with this email. Did you select the correct region ?",
+      "cannot_connect": "Cannot connect to Petkit servers.",
+      "session_error": "Session error, please retry",
+      "server_busy": "Server busy, please retry"
     },
     "step": {
       "user": {

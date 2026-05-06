@@ -7,12 +7,10 @@ from typing import Any
 from pypetkitapi import (
     PetkitAuthenticationUnregisteredEmailError,
     PetKitClient,
-    PetkitRegionalServerNotFoundError,
     PetkitSessionError,
-    PetkitSessionExpiredError,
     PetkitTimeoutError,
-    PypetkitError,
 )
+from pypetkitapi.exceptions import PetkitAuthenticationError, PetkitServerBusyError
 import voluptuous as vol
 
 from homeassistant import data_entry_flow
@@ -238,33 +236,36 @@ class PetkitFlowHandler(ConfigFlow, domain=DOMAIN):
                         region=user_region,
                         timezone=user_input.get(CONF_TIME_ZONE, tz_from_ha),
                     )
-                except (
-                    PetkitTimeoutError,
-                    PetkitSessionError,
-                    PetkitSessionExpiredError,
-                    PetkitAuthenticationUnregisteredEmailError,
-                    PetkitRegionalServerNotFoundError,
-                ) as exception:
-                    LOGGER.error(exception)
-                    _errors["base"] = "connection"
-                except PypetkitError as exception:
-                    LOGGER.error(exception)
+
+                except PetkitServerBusyError:
+                    _errors["base"] = "server_busy"
+
+                except PetkitAuthenticationError:
+                    _errors["base"] = "invalid_auth"
+
+                except PetkitAuthenticationUnregisteredEmailError:
+                    _errors["base"] = "invalid_region"
+
+                except PetkitTimeoutError:
+                    _errors["base"] = "cannot_connect"
+
+                except PetkitSessionError:
+                    _errors["base"] = "session_error"
+
+                except Exception:  # noqa: BLE001
+                    LOGGER.exception("Unexpected error")
                     _errors["base"] = "unknown"
                 else:
                     return self.async_create_entry(
                         title=user_input[CONF_USERNAME],
-                        data={
-                            **user_input,
-                            CONF_REGION: user_region,
-                            CONF_TIME_ZONE: user_input.get(CONF_TIME_ZONE, tz_from_ha),
-                        },
+                        data=user_input,
                         options={
                             MEDIA_SECTION: {
                                 CONF_MEDIA_PATH: DEFAULT_MEDIA_PATH,
                                 CONF_SCAN_INTERVAL_MEDIA: DEFAULT_SCAN_INTERVAL_MEDIA,
                                 CONF_MEDIA_DL_IMAGE: DEFAULT_DL_IMAGE,
                                 CONF_MEDIA_DL_VIDEO: DEFAULT_DL_VIDEO,
-                                CONF_MEDIA_EV_TYPE: list(DEFAULT_EVENTS),
+                                CONF_MEDIA_EV_TYPE: DEFAULT_EVENTS,
                                 CONF_DELETE_AFTER: DEFAULT_DELETE_AFTER,
                             },
                             BT_SECTION: {
