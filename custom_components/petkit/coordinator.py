@@ -69,27 +69,31 @@ class PetkitDataUpdateCoordinator(DataUpdateCoordinator):
         )
         self.config_entry = config_entry
         self.previous_devices = set()
-        self.curent_devices = set()
+        self.current_devices = set()
         self.fast_poll_tic = 0
         self.mqtt_connected = False
 
     def enable_smart_polling(self, nb_tic: int) -> None:
         """Enable smart polling."""
         if self.fast_poll_tic > 0:
-            LOGGER.debug(f"Fast poll tic already enabled for {self.fast_poll_tic} tics")
+            LOGGER.debug(
+                "Fast poll tic already enabled for %s tics", self.fast_poll_tic
+            )
             return
 
         self.update_interval = timedelta(seconds=SCAN_INTERVAL_FAST)
         self.fast_poll_tic = nb_tic
         LOGGER.debug(
-            f"Fast poll tic enabled for {nb_tic} tics (at {SCAN_INTERVAL_FAST}sec interval)"
+            "Fast poll tic enabled for %s tics (at %ssec interval)",
+            nb_tic,
+            SCAN_INTERVAL_FAST,
         )
 
     async def _update_smart_polling(self) -> None:
         """Update smart polling."""
         if self.fast_poll_tic > 0:
             self.fast_poll_tic -= 1
-            LOGGER.debug(f"Fast poll tic remaining: {self.fast_poll_tic}")
+            LOGGER.debug("Fast poll tic remaining: %s", self.fast_poll_tic)
         else:
             base_interval = (
                 SCAN_INTERVAL_SLOW if self.mqtt_connected else DEFAULT_SCAN_INTERVAL
@@ -98,7 +102,7 @@ class PetkitDataUpdateCoordinator(DataUpdateCoordinator):
             if self.update_interval != timedelta(seconds=base_interval):
                 self.update_interval = timedelta(seconds=base_interval)
                 LOGGER.debug(
-                    f"Fast poll tic ended, reset to {base_interval} sec interval"
+                    "Fast poll tic ended, reset to %s sec interval", base_interval
                 )
 
     async def _async_update_data(
@@ -180,7 +184,7 @@ class PetkitMediaUpdateCoordinator(DataUpdateCoordinator):
             # Relative name (e.g. "petkit") → store under /media for backward compat.
             self.media_path = Path("/media") / raw
 
-        LOGGER.debug(f"Media path = {self.media_path}")
+        LOGGER.debug("Media path = %s", self.media_path)
 
         if dl_image:
             self.media_type.append(MediaType.IMAGE)
@@ -203,16 +207,16 @@ class PetkitMediaUpdateCoordinator(DataUpdateCoordinator):
 
         for device in devices_lst:
             if not hasattr(client.petkit_entities[device], "medias"):
-                LOGGER.debug(f"Device id = {device} does not support medias")
+                LOGGER.debug("Device id = %s does not support medias", device)
                 continue
 
             media_lst = client.petkit_entities[device].medias
 
             if not media_lst:
-                LOGGER.debug(f"No medias found for device id = {device}")
+                LOGGER.debug("No medias found for device id = %s", device)
                 continue
 
-            LOGGER.debug(f"Gathering medias files onto disk for device id = {device}")
+            LOGGER.debug("Gathering medias files onto disk for device id = %s", device)
             await client.media_manager.gather_all_media_from_disk(
                 self.media_path, device
             )
@@ -224,7 +228,9 @@ class PetkitMediaUpdateCoordinator(DataUpdateCoordinator):
             for media in to_dl:
                 await dl_mgt.download_file(media, self.media_type)
             LOGGER.debug(
-                f"Downloaded all medias for device id = {device} is OK (got {len(to_dl)} files to download)"
+                "Downloaded all medias for device id = %s is OK (got %s files to download)",
+                device,
+                len(to_dl),
             )
             self.media_table[device] = deepcopy(
                 await client.media_manager.gather_all_media_from_disk(
@@ -253,7 +259,7 @@ class PetkitMediaUpdateCoordinator(DataUpdateCoordinator):
             try:
                 date_dirs = await asyncio.to_thread(list_directory, device_media_path)
             except FileNotFoundError:
-                LOGGER.warning(f"Device media path not found: {device_media_path}")
+                LOGGER.warning("Device media path not found: %s", device_media_path)
                 continue
 
             for date_dir in date_dirs:
@@ -261,11 +267,11 @@ class PetkitMediaUpdateCoordinator(DataUpdateCoordinator):
                     try:
                         dir_date = datetime.strptime(date_dir.name, "%Y%m%d")
                         if dir_date < retention_date:
-                            LOGGER.debug(f"Deleting old media files in {date_dir}")
+                            LOGGER.debug("Deleting old media files in %s", date_dir)
                             await asyncio.to_thread(shutil.rmtree, date_dir)
                     except ValueError:
                         LOGGER.warning(
-                            f"Invalid date format in directory name: {date_dir.name}"
+                            "Invalid date format in directory name: %s", date_dir.name
                         )
 
 
@@ -320,8 +326,8 @@ class PetkitBluetoothUpdateCoordinator(DataUpdateCoordinator):
             await self.config.runtime_data.client.bluetooth_manager.close_ble_connection(
                 device_id
             )
-            LOGGER.debug(f"Bluetooth connection for device id = {device_id} is OK")
+            LOGGER.debug("Bluetooth connection for device id = %s is OK", device_id)
             self.last_update_timestamps[device_id] = datetime.now(timezone.utc)
             return True
-        LOGGER.debug(f"Bluetooth connection for device id = {device_id} failed")
+        LOGGER.debug("Bluetooth connection for device id = %s failed", device_id)
         return False

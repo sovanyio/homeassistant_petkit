@@ -236,7 +236,7 @@ class AgoraRTMSignaling:
             )
             url = f"https://{domain}{path}{query}"
 
-            LOGGER.debug(f"Send command URL= {url}")
+            LOGGER.debug("Send command URL= %s", url)
 
             try:
                 async with self._send_lock, self._session.post(

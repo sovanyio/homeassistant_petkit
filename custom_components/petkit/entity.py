@@ -47,7 +47,7 @@ class PetKitDescSensorBase(EntityDescription):
 
         device_type = getattr(device.device_nfo, "device_type", None)
         if not device_type:
-            LOGGER.error(f"Entities {device.name} has no type, can't check support")
+            LOGGER.error("Entities %s has no type, can't check support", device.name)
             return False
         device_type = device_type.lower()
 
@@ -65,21 +65,21 @@ class PetKitDescSensorBase(EntityDescription):
     def _is_force_added(self, device_type: str) -> bool:
         """Check if the device is in the force_add list."""
         if self.force_add and device_type in self.force_add:
-            LOGGER.debug(f"{device_type} force add for '{self.key}'")
+            LOGGER.debug("%s force add for '%s'", device_type, self.key)
             return True
         return False
 
     def _is_ignored(self, device_type: str) -> bool:
         """Check if the device is in the ignore_types list."""
         if self.ignore_types and device_type in self.ignore_types:
-            LOGGER.debug(f"{device_type} force ignore for '{self.key}'")
+            LOGGER.debug("%s force ignore for '%s'", device_type, self.key)
             return True
         return False
 
     def _is_not_in_supported_types(self, device_type: str) -> bool:
         """Check if the device is not in the only_for_types list."""
         if self.only_for_types and device_type not in self.only_for_types:
-            LOGGER.debug(f"{device_type} is NOT COMPATIBLE with '{self.key}'")
+            LOGGER.debug("%s is NOT COMPATIBLE with '%s'", device_type, self.key)
             return True
         return False
 
@@ -90,13 +90,17 @@ class PetKitDescSensorBase(EntityDescription):
                 result = self.value(device)
                 if result is None:
                     LOGGER.debug(
-                        f"{device.device_nfo.device_type} DOES NOT support '{self.key}' (value is None)"
+                        "%s DOES NOT support '%s' (value is None)",
+                        device.device_nfo.device_type,
+                        self.key,
                     )
                     return False
-                LOGGER.debug(f"{device.device_nfo.device_type} supports '{self.key}'")
+                LOGGER.debug(
+                    "%s supports '%s'", device.device_nfo.device_type, self.key
+                )
             except AttributeError:
                 LOGGER.debug(
-                    f"{device.device_nfo.device_type} DOES NOT support '{self.key}'"
+                    "%s DOES NOT support '%s'", device.device_nfo.device_type, self.key
                 )
                 return False
         return True
