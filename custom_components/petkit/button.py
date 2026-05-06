@@ -462,8 +462,6 @@ class PetkitPtzButton(PetkitEntity, ButtonEntity):
     def available(self) -> bool:
         """Available when the device is online and a camera RTM session exists."""
         device_data = self.coordinator.data.get(self.device.id)
-        if device_data is None:
-            return False
         try:
             if device_data.state.pim not in POWER_ONLINE_STATE:
                 return False
