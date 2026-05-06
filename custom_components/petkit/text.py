@@ -68,7 +68,6 @@ TEXT_MAPPING: dict[type[PetkitDevices], list[PetkitTextDesc]] = {
         PetkitTextDesc(
             key="Manual feed single",
             translation_key="manual_feed_single",
-            value=lambda device: device.settings.light_mode,
             native_min=1,
             native_max=3,
             pattern=INPUT_FEED_PATTERN,
@@ -81,7 +80,6 @@ TEXT_MAPPING: dict[type[PetkitDevices], list[PetkitTextDesc]] = {
         PetkitTextDesc(
             key="Manual feed dual h1",
             translation_key="manual_feed_dual_h1",
-            value=lambda device: device.settings.light_mode,
             native_min=1,
             native_max=2,
             pattern=INPUT_FEED_PATTERN,
@@ -96,7 +94,6 @@ TEXT_MAPPING: dict[type[PetkitDevices], list[PetkitTextDesc]] = {
         PetkitTextDesc(
             key="Manual feed dual h2",
             translation_key="manual_feed_dual_h2",
-            value=lambda device: device.settings.light_mode,
             native_min=1,
             native_max=2,
             pattern=INPUT_FEED_PATTERN,
