@@ -57,6 +57,7 @@ from .utils import (
     get_raw_schedule,
     map_litter_event,
     map_work_state,
+    get_device_records_history,
 )
 
 if TYPE_CHECKING:
@@ -542,6 +543,21 @@ SENSOR_MAPPING: dict[type[PetkitDevices], list[PetKitSensorDesc]] = {
             native_unit_of_measurement=UnitOfTime.DAYS,
             value=lambda device: device.state.sand_tray_left_day,
             only_for_types=[T7],
+        ),
+        PetKitSensorDesc(
+            key="Device records history",
+            translation_key="device_records_history",
+            entity_category=EntityCategory.DIAGNOSTIC,
+            device_class=SensorDeviceClass.TIMESTAMP,
+            value=lambda device: (
+                datetime.fromtimestamp(int(device.device_records[-1].timestamp), tz=UTC)
+                if device.device_records and isinstance(device.device_records, list)
+                and hasattr(device.device_records[-1], "timestamp")
+                and device.device_records[-1].timestamp is not None
+                else None
+            ),
+            attributes=lambda device: get_device_records_history(device),
+            force_add=DEVICES_LITTER_BOX,
         ),
     ],
     WaterFountain: [
