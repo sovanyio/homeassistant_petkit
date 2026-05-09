@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
-import aiohttp
 from pypetkitapi import (
     PetkitAuthenticationUnregisteredEmailError,
     PetKitClient,
@@ -14,6 +12,7 @@ from pypetkitapi import (
     PetkitSessionExpiredError,
     PetkitTimeoutError,
     PypetkitError,
+    RegionServerGroup,
 )
 import voluptuous as vol
 
@@ -65,71 +64,7 @@ from .const import (
     MEDIA_SECTION,
     NOTIFICATION_CATEGORIES,
     NOTIFICATION_SECTION,
-    PETKIT_REGION_SERVERS_URL,
-    PETKIT_SERVER_LABELS,
 )
-
-
-async def _fetch_petkit_servers(
-    session: aiohttp.ClientSession,
-) -> list[dict[str, Any]] | None:
-    """Fetch the PetKit gateway list grouped by server.
-
-    Returns a list of dicts with `label` (friendly server name) and
-    `country` (ISO code we feed back to pypetkitapi). Returns `None` when
-    the API is unreachable so the caller can fall back to the full country
-    dropdown.
-    """
-    try:
-        async with asyncio.timeout(5):
-            async with session.get(PETKIT_REGION_SERVERS_URL) as resp:
-                resp.raise_for_status()
-                payload = await resp.json()
-    except (TimeoutError, aiohttp.ClientError, ValueError) as exc:
-        LOGGER.debug("Failed to fetch PetKit region servers: %s", exc)
-        return None
-
-    countries_by_gateway: dict[str, list[str]] = {}
-    for entry in payload.get("result", {}).get("list", []):
-        gateway = entry.get("gateway")
-        country = entry.get("id")
-        if not gateway or not country:
-            continue
-        countries_by_gateway.setdefault(gateway, []).append(country)
-
-    if not countries_by_gateway:
-        return None
-
-    servers: list[dict[str, Any]] = []
-    for gateway, countries in countries_by_gateway.items():
-        label = PETKIT_SERVER_LABELS.get(gateway, gateway)
-        servers.append(
-            {
-                "gateway": gateway,
-                "label": label,
-                # First country alphabetically so the value is stable across
-                # API responses (PetKit's list order is not guaranteed).
-                "country": sorted(countries)[0],
-                "countries": countries,
-            }
-        )
-
-    # PetKit's regionservers endpoint omits the China-only gateway because
-    # the China cloud is reached via a separate path inside pypetkitapi
-    # (`region.lower() == "cn"`). Surface it manually so Chinese users can
-    # actually pick it.
-    if not any(s["country"] == "CN" for s in servers):
-        servers.append(
-            {
-                "gateway": "https://api.petkit.cn/6/",
-                "label": PETKIT_SERVER_LABELS.get("https://api.petkit.cn/6/", "China"),
-                "country": "CN",
-                "countries": ["CN"],
-            }
-        )
-
-    servers.sort(key=lambda s: s["label"])
-    return servers
 
 
 class PetkitOptionsFlowHandler(OptionsFlow):
@@ -296,7 +231,14 @@ class PetkitFlowHandler(ConfigFlow, domain=DOMAIN):
         # Fetch the live PetKit gateway list so we can render a short server
         # dropdown (~5 entries) instead of a 200+ country list. If the call
         # fails we silently fall back to the country list below.
-        servers = await _fetch_petkit_servers(async_get_clientsession(self.hass))
+        servers: list[RegionServerGroup] | None
+        try:
+            servers = await PetKitClient.fetch_region_servers(
+                async_get_clientsession(self.hass)
+            )
+        except PypetkitError as exc:
+            LOGGER.debug("Failed to fetch PetKit region servers: %s", exc)
+            servers = None
 
         if user_input is not None:
             advanced = user_input.get(ADVANCED_SECTION, {})
@@ -373,18 +315,20 @@ class PetkitFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if servers:
             region_options = [
-                selector.SelectOptionDict(value=s["country"], label=s["label"])
+                selector.SelectOptionDict(
+                    value=s.representative_country, label=s.label
+                )
                 for s in servers
             ]
-            valid_region_values = {s["country"] for s in servers}
+            valid_region_values = {s.representative_country for s in servers}
             # Find the server whose country bucket contains the HA country and
             # default to that server's representative code. If HA's country is
             # not in any bucket, fall back to the first listed server.
             auto_server = next(
-                (s for s in servers if country_from_ha in s["countries"]),
+                (s for s in servers if country_from_ha in s.countries),
                 servers[0],
             )
-            auto_default = auto_server["country"]
+            auto_default = auto_server.representative_country
             prev_region = prev_advanced.get(CONF_REGION)
             # Drop a previously selected value if it is from the old country
             # dropdown so voluptuous doesn't render an empty selector.
