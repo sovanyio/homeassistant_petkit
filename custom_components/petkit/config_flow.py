@@ -321,9 +321,7 @@ class PetkitFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if servers:
             region_options = [
-                selector.SelectOptionDict(
-                    value=s.representative_country, label=s.label
-                )
+                selector.SelectOptionDict(value=s.representative_country, label=s.label)
                 for s in servers
             ]
             valid_region_values = {s.representative_country for s in servers}
