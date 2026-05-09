@@ -255,7 +255,7 @@ class PetkitSelect(PetkitEntity, SelectEntity):
     def available(self) -> bool:
         """Return if this button is available or not."""
         device_data = self.coordinator.data.get(self.device.id)
-        if hasattr(device_data.state, "pim"):
+        if device_data and hasattr(device_data.state, "pim"):
             return device_data.state.pim in POWER_ONLINE_STATE
         return True
 

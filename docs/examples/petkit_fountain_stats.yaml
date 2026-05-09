@@ -1,0 +1,76 @@
+# PetKit fountain local drink stats package.
+#
+# Drop this file into your Home Assistant config under `packages/`, then make
+# sure packages are loaded:
+#
+#   homeassistant:
+#     packages: !include_dir_named packages
+#
+# Pair with the `fountain_drink_counter` blueprint (drinks counter) and
+# optionally the three `fountain_*_drinks_alert` blueprints (anomaly alerts).
+# When you create an automation from the counter blueprint, point it at
+# `counter.petkit_fountain_drinks_total` below and turn OFF the "Reset counter
+# daily" option. The daily/weekly/monthly cycles are handled by the utility
+# meters here, not by counter resets.
+#
+# Edit the binary_sensor entity_id below to match your fountain.
+
+counter:
+  petkit_fountain_drinks_total:
+    name: Petkit fountain drinks total
+    icon: mdi:cup-water
+    initial: 0
+    step: 1
+    restore: true
+
+utility_meter:
+  petkit_fountain_drinks_today:
+    source: counter.petkit_fountain_drinks_total
+    name: Petkit fountain drinks today
+    cycle: daily
+  petkit_fountain_drinks_weekly:
+    source: counter.petkit_fountain_drinks_total
+    name: Petkit fountain drinks this week
+    cycle: weekly
+  petkit_fountain_drinks_monthly:
+    source: counter.petkit_fountain_drinks_total
+    name: Petkit fountain drinks this month
+    cycle: monthly
+
+sensor:
+  - platform: history_stats
+    name: Petkit fountain drink time today
+    entity_id: binary_sensor.REPLACE_ME_pet_drinking
+    state: "on"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+  - platform: history_stats
+    name: Petkit fountain drink time this week
+    entity_id: binary_sensor.REPLACE_ME_pet_drinking
+    state: "on"
+    type: time
+    start: "{{ now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=now().weekday()) }}"
+    end: "{{ now() }}"
+  - platform: statistics
+    name: Petkit fountain drinks median
+    unique_id: petkit_fountain_drinks_median
+    entity_id: sensor.petkit_fountain_drinks_final_today
+    state_characteristic: median
+    sampling_size: 14
+    max_age:
+      days: 8
+
+# Daily snapshot of today's final drink count, sampled at 23:55. The
+# `sensor.petkit_fountain_drinks_today` utility_meter resets to 0 at midnight,
+# so we capture the day's value just before the rollover. The statistics
+# sensor above takes its 7-day median from these snapshots.
+template:
+  - trigger:
+      - platform: time
+        at: "23:55:00"
+    sensor:
+      - name: Petkit fountain drinks final today
+        unique_id: petkit_fountain_drinks_final_today
+        state: "{{ states('sensor.petkit_fountain_drinks_today') | int(0) }}"
+        state_class: measurement

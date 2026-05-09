@@ -1,0 +1,94 @@
+blueprint:
+  name: "PetKit fountain: drink counter"
+  description: >
+    Increments a counter each time the fountain detects a pet drinking, with
+    an optional daily reset. Lets you keep a local drink history without
+    relying on PetKit's cloud aggregates.
+
+
+    **Setup**
+
+
+    1. Create a Counter helper: Settings → Devices & services → Helpers →
+    Create helper → Counter. Suggested name: `Fountain drinks today`. Leave
+    *Initial value* at 0 and *Step* at 1.
+
+    2. Import this blueprint, then create an automation from it. Pick your
+    fountain's *Pet drinking* binary sensor and the counter you just created.
+
+
+    **Weekly / monthly totals (optional)**
+
+
+    Add a Utility Meter helper (cycle: weekly / monthly) with the counter
+    as its source. Leave *Reset at midnight* enabled. The counter resets
+    daily, the utility meter records the running totals.
+  domain: automation
+  source_url: https://github.com/Jezza34000/homeassistant_petkit/blob/main/blueprints/automation/petkit/fountain_drink_counter.yaml
+  input:
+    pet_drinking_sensor:
+      name: Pet drinking sensor
+      description: >
+        The fountain's "Pet drinking" binary sensor (device class:
+        occupancy). One drink event = one off→on transition.
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              device_class: occupancy
+    drinks_counter:
+      name: Drinks counter
+      description: A Counter helper that will be incremented on each drink event.
+      selector:
+        entity:
+          filter:
+            - domain: counter
+    reset_at_midnight:
+      name: Reset counter daily
+      description: >
+        If enabled, the counter resets to 0 at the time below. Disable if
+        you handle resets via a Utility Meter instead.
+      default: true
+      selector:
+        boolean:
+    reset_time:
+      name: Reset time
+      description: When the daily reset runs. Ignored if the reset is disabled.
+      default: "00:00:00"
+      selector:
+        time:
+
+mode: parallel
+max_exceeded: silent
+
+variables:
+  reset_enabled: !input reset_at_midnight
+
+trigger:
+  - platform: state
+    entity_id: !input pet_drinking_sensor
+    from: "off"
+    to: "on"
+    id: drink
+  - platform: time
+    at: !input reset_time
+    id: reset
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: drink
+        sequence:
+          - service: counter.increment
+            target:
+              entity_id: !input drinks_counter
+      - conditions:
+          - condition: trigger
+            id: reset
+          - condition: template
+            value_template: "{{ reset_enabled }}"
+        sequence:
+          - service: counter.reset
+            target:
+              entity_id: !input drinks_counter
