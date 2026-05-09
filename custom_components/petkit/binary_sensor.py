@@ -46,6 +46,19 @@ class PetKitBinarySensorDesc(PetKitDescSensorBase, BinarySensorEntityDescription
     enable_fast_poll: bool = False
 
 
+def get_pump_running_status(device):
+    """Determine if the pump is running based on power and run status."""
+    # If the pump power is off, it is not running
+    if device.status.power_status == 0:
+        return False
+    # If power is on but the run status is unknown
+    if device.status.run_status is None:
+        return None
+
+    # Otherwise, it is running if the status is greater than 0
+    return device.status.run_status > 0
+
+
 COMMON_ENTITIES = [
     PetKitBinarySensorDesc(
         key="Camera status",
@@ -251,15 +264,7 @@ BINARY_SENSOR_MAPPING: dict[type[PetkitDevices], list[PetKitBinarySensorDesc]] =
             key="Pump running",
             translation_key="pump_running",
             device_class=BinarySensorDeviceClass.RUNNING,
-            value=lambda device: (
-                False
-                if device.status.power_status == 0
-                else (
-                    None
-                    if device.status.run_status is None
-                    else device.status.run_status > 0
-                )
-            ),
+            value=get_pump_running_status,
         ),
     ],
     Purifier: [
