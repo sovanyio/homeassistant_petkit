@@ -86,6 +86,7 @@ PLATFORMS: list[Platform] = [
 ]
 
 SERVICE_SET_FEEDING_SCHEDULE = "set_feeding_schedule"
+SERVICE_UPDATE_PET_USAGE_RECORD = "update_pet_usage_record"
 
 FEED_ITEM_SCHEMA = vol.Schema(
     {
@@ -109,6 +110,16 @@ SERVICE_SET_FEEDING_SCHEDULE_SCHEMA = vol.Schema(
     {
         vol.Required("device_id"): vol.Coerce(int),
         vol.Required("feed_daily_list"): vol.All(cv.ensure_list, [FEED_DAY_SCHEMA]),
+    }
+)
+
+SERVICE_UPDATE_PET_USAGE_RECORD_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): vol.Coerce(int),
+        vol.Required("old_pet_id"): cv.string,
+        vol.Required("new_pet_id"): cv.string,
+        vol.Required("timestamp"): vol.Coerce(int),
+        vol.Optional("weight"): vol.Coerce(float),
     }
 )
 
@@ -192,6 +203,88 @@ async def _async_handle_set_feeding_schedule(
     )
 
     await client.send_api_request(device_id, FeederCommand.SAVE_FEED, api_payload)
+
+
+async def _async_handle_update_pet_usage_record(
+    hass: HomeAssistant, call: ServiceCall
+) -> None:
+    """Handle the update_pet_usage_record service call."""
+    device_id = call.data["device_id"]
+    old_pet_id = call.data["old_pet_id"]
+    new_pet_id = call.data["new_pet_id"]
+    timestamp = call.data["timestamp"]
+    weight = call.data.get("weight")
+
+    client: PetKitClient | None = None
+    coordinator = None
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        if hasattr(entry, "runtime_data") and entry.runtime_data:
+            candidate = entry.runtime_data.client
+            if device_id in candidate.petkit_entities:
+                client = candidate
+                coordinator = entry.runtime_data.coordinator
+                break
+
+    if client is None:
+        raise ValueError(f"Device with device_id {device_id} not found.")
+
+    # Updated usage record data
+    record_params = {
+        "petId": new_pet_id,
+        "batch": 0,
+        "type": 15,
+        "oldPetId": old_pet_id,
+        "deviceId": device_id,
+        "timeOut": timestamp,
+    }
+
+    LOGGER.debug("Updating pet usage record with params: %s", record_params)
+    await client.req.request(
+        method="POST",
+        url="pet/data_update_record",
+        params=record_params,
+        headers=await client.get_session_id(),
+    )
+
+    # Updated weight profile data, like the app
+    if weight is not None:
+        # Check if the weight is significantly different from the current weight
+        try:
+            pet_id_int = int(new_pet_id)
+            if pet_id_int in client.petkit_entities:
+                pet = client.petkit_entities[pet_id_int]
+                if getattr(pet, "pet_details", None) is not None:
+                    current_weight = pet.pet_details.weight
+                    if current_weight is not None:
+                        diff = abs(current_weight - weight)
+                        if diff < 0.5:  # 500 grams threshold
+                            LOGGER.debug(
+                                "New weight (%s) is not significantly different from current weight (%s) for pet %s. Skipping weight update.",
+                                weight, current_weight, new_pet_id
+                            )
+                            weight = None
+        except (ValueError, TypeError):
+            pass
+
+    if weight is not None:
+        import json
+
+        kv_data = {"weight": str(weight)}
+        props_params = {
+            "petId": new_pet_id,
+            "kv": json.dumps(kv_data),
+        }
+        LOGGER.debug("Updating pet weight with params: %s", props_params)
+        await client.req.request(
+            method="POST",
+            url="pet/updatepetprops",
+            params=props_params,
+            headers=await client.get_session_id(),
+        )
+    # Refresh coordinator data
+    if coordinator is not None:
+        LOGGER.debug("Requesting coordinator refresh after pet usage update")
+        await coordinator.async_request_refresh()
 
 
 async def async_setup_entry(
@@ -305,6 +398,19 @@ async def async_setup_entry(
             SERVICE_SET_FEEDING_SCHEDULE,
             handle_set_feeding_schedule,
             schema=SERVICE_SET_FEEDING_SCHEDULE_SCHEMA,
+        )
+
+    if not hass.services.has_service(DOMAIN, SERVICE_UPDATE_PET_USAGE_RECORD):
+
+        async def handle_update_pet_usage_record(call: ServiceCall) -> None:
+            """Wrapper so HA detects this as a coroutine function."""
+            await _async_handle_update_pet_usage_record(hass, call)
+
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_UPDATE_PET_USAGE_RECORD,
+            handle_update_pet_usage_record,
+            schema=SERVICE_UPDATE_PET_USAGE_RECORD_SCHEMA,
         )
 
     return True
