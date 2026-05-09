@@ -375,5 +375,5 @@ def get_device_records_history(device) -> dict[str, any] | None:
             LOGGER.error("Failed to serialize litter record: %s", e)
 
     return {
-        "records": serialized_records
+        "records": serialized_records[::-1]
     }
