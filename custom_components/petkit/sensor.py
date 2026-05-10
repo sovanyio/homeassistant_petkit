@@ -108,6 +108,15 @@ def get_bt_state_text(state: BluetoothState) -> str | None:
     }.get(state, "Unknown")
 
 
+def format_pet_date(timestamp):
+    """Convert timestamp as date if available"""
+    if timestamp is None:
+        return None
+    if timestamp == 0:
+        return "Unknown"
+    return datetime.fromtimestamp(timestamp)
+
+
 COMMON_ENTITIES = [
     PetKitSensorDesc(
         key="Device status",
@@ -772,30 +781,14 @@ SENSOR_MAPPING: dict[type[PetkitDevices], list[PetKitSensorDesc]] = {
             key="Pet last urination date",
             translation_key="pet_last_urination_date",
             entity_picture=lambda pet: pet.avatar,
-            value=lambda pet: (
-                None
-                if pet.last_urination is None
-                else (
-                    "Unknown"
-                    if pet.last_urination == 0
-                    else datetime.fromtimestamp(pet.last_urination)
-                )
-            ),
+            value=lambda pet: format_pet_date(pet.last_urination),
             restore_state=True,
         ),
         PetKitSensorDesc(
             key="Pet last defecation date",
             translation_key="pet_last_defecation_date",
             entity_picture=lambda pet: pet.avatar,
-            value=lambda pet: (
-                None
-                if pet.last_defecation is None
-                else (
-                    "Unknown"
-                    if pet.last_defecation == 0
-                    else datetime.fromtimestamp(pet.last_defecation)
-                )
-            ),
+            value=lambda pet: format_pet_date(pet.last_defecation),
             restore_state=True,
         ),
     ],
