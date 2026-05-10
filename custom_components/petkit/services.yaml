@@ -11,7 +11,7 @@ set_feeding_schedule:
       name: Device ID
       description: The numeric Petkit device ID of the feeder.
       required: true
-      example: 10014481
+      example: 12344481
       selector:
         number:
           min: 1
@@ -54,7 +54,7 @@ update_pet_usage_record:
       name: Device ID
       description: The numeric Petkit device ID of the litter box.
       required: true
-      example: 100115921
+      example: 12344481
       selector:
         number:
           min: 1
@@ -70,7 +70,7 @@ update_pet_usage_record:
       name: New Pet ID
       description: The correct Pet ID.
       required: true
-      example: "101101888"
+      example: "123456789"
       selector:
         text:
     timestamp:
