@@ -260,7 +260,9 @@ async def _async_handle_update_pet_usage_record(
                         if diff < 0.5:  # 500 grams threshold
                             LOGGER.debug(
                                 "New weight (%s) is not significantly different from current weight (%s) for pet %s. Skipping weight update.",
-                                weight, current_weight, new_pet_id
+                                weight,
+                                current_weight,
+                                new_pet_id,
                             )
                             weight = None
         except (ValueError, TypeError):

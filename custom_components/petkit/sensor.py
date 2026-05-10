@@ -53,11 +53,11 @@ from homeassistant.const import (
 from .const import BATTERY_LEVEL_MAP, DEVICE_STATUS_MAP, DOMAIN, LOGGER, NO_ERROR
 from .entity import PetKitDescSensorBase, PetkitEntity
 from .utils import (
+    get_device_records_history,
     get_raw_feed_plan_from_schedule,
     get_raw_schedule,
     map_litter_event,
     map_work_state,
-    get_device_records_history,
 )
 
 if TYPE_CHECKING:
@@ -550,10 +550,11 @@ SENSOR_MAPPING: dict[type[PetkitDevices], list[PetKitSensorDesc]] = {
             entity_category=EntityCategory.DIAGNOSTIC,
             device_class=SensorDeviceClass.TIMESTAMP,
             value=lambda device: (
-                datetime.fromtimestamp(int(device.device_records[-1].timestamp), tz=UTC)
-                if device.device_records and isinstance(device.device_records, list)
-                and hasattr(device.device_records[-1], "timestamp")
-                and device.device_records[-1].timestamp is not None
+                datetime.fromtimestamp(int(device.device_records[0].timestamp), tz=UTC)
+                if device.device_records
+                and isinstance(device.device_records, list)
+                and hasattr(device.device_records[0], "timestamp")
+                and device.device_records[0].timestamp is not None
                 else None
             ),
             attributes=lambda device: get_device_records_history(device),
