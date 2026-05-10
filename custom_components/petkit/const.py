@@ -16,6 +16,8 @@ AGORA_APP_ID = "244c49951296440cbc1e3b937bf5e410"
 # Configuration
 CONF_SCAN_INTERVAL_MEDIA = "scan_interval_media"
 
+ADVANCED_SECTION = "advanced_options"
+
 BT_SECTION = "bluetooth_options"
 CONF_BLE_RELAY_ENABLED = "ble_relay_enabled"
 CONF_SCAN_INTERVAL_BLUETOOTH = "scan_interval_bluetooth"

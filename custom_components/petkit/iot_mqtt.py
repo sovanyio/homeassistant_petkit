@@ -350,12 +350,12 @@ class PetkitIotMqttListener:
 
         try:
             client.disconnect()
-        except (ConnectionError, OSError) as err:
+        except Exception as err:  # noqa: BLE001
             LOGGER.debug("Disconnect raised: %s", err, exc_info=True)
 
         try:
             client.loop_stop()
-        except (ConnectionError, OSError) as err:
+        except Exception as err:  # noqa: BLE001
             LOGGER.debug("Loop_stop raised: %s", err, exc_info=True)
 
         self._connection_status = MqttConnectionStatus.DISCONNECTED
@@ -374,7 +374,7 @@ class PetkitIotMqttListener:
         try:
             for topic in topics:
                 client.subscribe(topic, qos=0)
-        except (ConnectionError, OSError, ValueError) as err:
+        except Exception as err:  # noqa: BLE001
             LOGGER.warning("Subscribe failed: %s", err, exc_info=True)
 
     def _on_subscribe(self, client, userdata, mid, reason_code_list, properties):

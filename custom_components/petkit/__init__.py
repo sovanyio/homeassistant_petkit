@@ -17,6 +17,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import ServiceCall
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.loader import async_get_loaded_integration
@@ -350,6 +351,20 @@ async def async_setup_entry(
     )
 
     await coordinator.async_config_entry_first_refresh()
+
+    # Login succeeded but PetKit returned no devices. Most common cause is
+    # that the user logged in with a secondary account that has not yet
+    # accepted the Family Management invitation in the PetKit mobile app.
+    # Without this check, the integration silently sets up with zero
+    # entities and the user has no idea why.
+    if not entry.runtime_data.client.petkit_entities:
+        raise ConfigEntryNotReady(
+            "PetKit login succeeded, but no devices are shared with this "
+            "account. Open the PetKit mobile app, accept the Family "
+            "Management invitation for this account, and then reload this "
+            "integration."
+        )
+
     await coordinator_media.async_config_entry_first_refresh()
     await coordinator_bluetooth.async_config_entry_first_refresh()
 
