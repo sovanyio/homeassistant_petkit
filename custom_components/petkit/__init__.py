@@ -1,5 +1,6 @@
 """Custom integration to integrate Petkit Smart Devices with Home Assistant."""
 
+import json
 from __future__ import annotations
 
 from datetime import timedelta
@@ -270,8 +271,6 @@ async def _async_handle_update_pet_usage_record(
             pass
 
     if weight is not None:
-        import json
-
         kv_data = {"weight": str(weight)}
         props_params = {
             "petId": new_pet_id,
