@@ -356,7 +356,7 @@ def get_device_records_history(device) -> dict[str, any] | None:
     Home Assistant sensor attribute.
     """
     records = getattr(device, "device_records", None)
-    if not isinstance(records, list) or not records:
+    if not records:
         return None
 
     # pypetkitapi uses Pydantic. Use json serialization to ensure basic types

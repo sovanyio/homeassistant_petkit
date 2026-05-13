@@ -118,6 +118,20 @@ def format_pet_date(timestamp):
     return datetime.fromtimestamp(timestamp)
 
 
+def _get_latest_usage_record_timestamp(device) -> datetime | None:
+    """Return the timestamp of the most recent pet usage record (event_type 15)."""
+    records = device.device_records
+    if not records:
+        return None
+    usage_records = [r for r in records if r.event_type == 15]
+    if not usage_records:
+        return None
+    latest = usage_records[0]
+    if latest.timestamp is None:
+        return None
+    return datetime.fromtimestamp(int(latest.timestamp), tz=UTC)
+
+
 COMMON_ENTITIES = [
     PetKitSensorDesc(
         key="Device status",
@@ -559,14 +573,7 @@ SENSOR_MAPPING: dict[type[PetkitDevices], list[PetKitSensorDesc]] = {
             translation_key="device_records_history",
             entity_category=EntityCategory.DIAGNOSTIC,
             device_class=SensorDeviceClass.TIMESTAMP,
-            value=lambda device: (
-                datetime.fromtimestamp(int(device.device_records[0].timestamp), tz=UTC)
-                if device.device_records
-                and isinstance(device.device_records, list)
-                and hasattr(device.device_records[0], "timestamp")
-                and device.device_records[0].timestamp is not None
-                else None
-            ),
+            value=_get_latest_usage_record_timestamp,
             attributes=lambda device: get_device_records_history(device),
             force_add=LITTER_NO_CAMERA,
         ),

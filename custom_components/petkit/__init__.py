@@ -1,13 +1,12 @@
 """Custom integration to integrate Petkit Smart Devices with Home Assistant."""
 
-import json
 from __future__ import annotations
 
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from pypetkitapi import Feeder, PetKitClient
-from pypetkitapi.command import FeederCommand
+from pypetkitapi.command import FeederCommand, LitterCommand, PetCommand
 import voluptuous as vol
 
 from homeassistant.const import (
@@ -88,7 +87,8 @@ PLATFORMS: list[Platform] = [
 ]
 
 SERVICE_SET_FEEDING_SCHEDULE = "set_feeding_schedule"
-SERVICE_UPDATE_PET_USAGE_RECORD = "update_pet_usage_record"
+SERVICE_UPDATE_LITTER_BOX_USAGE_RECORD = "update_litter_box_usage_record"
+SERVICE_UPDATE_PET_WEIGHT = "update_pet_weight"
 
 FEED_ITEM_SCHEMA = vol.Schema(
     {
@@ -115,13 +115,20 @@ SERVICE_SET_FEEDING_SCHEDULE_SCHEMA = vol.Schema(
     }
 )
 
-SERVICE_UPDATE_PET_USAGE_RECORD_SCHEMA = vol.Schema(
+SERVICE_UPDATE_LITTER_BOX_USAGE_RECORD_SCHEMA = vol.Schema(
     {
         vol.Required("device_id"): vol.Coerce(int),
         vol.Required("old_pet_id"): cv.string,
         vol.Required("new_pet_id"): cv.string,
         vol.Required("timestamp"): vol.Coerce(int),
-        vol.Optional("weight"): vol.Coerce(float),
+    }
+)
+
+SERVICE_UPDATE_PET_WEIGHT_SCHEMA = vol.Schema(
+    {
+        vol.Required("pet_id"): vol.Coerce(int),
+        vol.Required("weight"): vol.Coerce(int),
+        vol.Optional("unit", default="g"): vol.In(["g", "lbs"]),
     }
 )
 
@@ -207,15 +214,14 @@ async def _async_handle_set_feeding_schedule(
     await client.send_api_request(device_id, FeederCommand.SAVE_FEED, api_payload)
 
 
-async def _async_handle_update_pet_usage_record(
+async def _async_handle_update_litter_box_usage_record(
     hass: HomeAssistant, call: ServiceCall
 ) -> None:
-    """Handle the update_pet_usage_record service call."""
+    """Handle the update_litter_box_usage_record service call."""
     device_id = call.data["device_id"]
     old_pet_id = call.data["old_pet_id"]
     new_pet_id = call.data["new_pet_id"]
-    timestamp = call.data["timestamp"]
-    weight = call.data.get("weight")
+    time_out = call.data["timestamp"]
 
     client: PetKitClient | None = None
     coordinator = None
@@ -230,63 +236,57 @@ async def _async_handle_update_pet_usage_record(
     if client is None:
         raise ValueError(f"Device with device_id {device_id} not found.")
 
-    # Updated usage record data
-    record_params = {
-        "petId": new_pet_id,
-        "batch": 0,
-        "type": 15,
-        "oldPetId": old_pet_id,
-        "deviceId": device_id,
-        "timeOut": timestamp,
-    }
-
-    LOGGER.debug("Updating pet usage record with params: %s", record_params)
-    await client.req.request(
-        method="POST",
-        url="pet/data_update_record",
-        params=record_params,
-        headers=await client.get_session_id(),
+    LOGGER.debug(
+        "Updating pet usage record: device=%s old_pet=%s new_pet=%s ts=%s",
+        device_id,
+        old_pet_id,
+        new_pet_id,
+        time_out,
+    )
+    await client.send_api_request(
+        device_id=device_id,
+        action=LitterCommand.UPDATE_USAGE_RECORD,
+        setting={
+            "old_pet_id": old_pet_id,
+            "new_pet_id": new_pet_id,
+            "time_out": time_out,
+        },
     )
 
-    # Updated weight profile data, like the app
-    if weight is not None:
-        # Check if the weight is significantly different from the current weight
-        try:
-            pet_id_int = int(new_pet_id)
-            if pet_id_int in client.petkit_entities:
-                pet = client.petkit_entities[pet_id_int]
-                if getattr(pet, "pet_details", None) is not None:
-                    current_weight = pet.pet_details.weight
-                    if current_weight is not None:
-                        diff = abs(current_weight - weight)
-                        if diff < 0.5:  # 500 grams threshold
-                            LOGGER.debug(
-                                "New weight (%s) is not significantly different from current weight (%s) for pet %s. Skipping weight update.",
-                                weight,
-                                current_weight,
-                                new_pet_id,
-                            )
-                            weight = None
-        except (ValueError, TypeError):
-            pass
-
-    if weight is not None:
-        kv_data = {"weight": str(weight)}
-        props_params = {
-            "petId": new_pet_id,
-            "kv": json.dumps(kv_data),
-        }
-        LOGGER.debug("Updating pet weight with params: %s", props_params)
-        await client.req.request(
-            method="POST",
-            url="pet/updatepetprops",
-            params=props_params,
-            headers=await client.get_session_id(),
-        )
     # Refresh coordinator data
     if coordinator is not None:
         LOGGER.debug("Requesting coordinator refresh after pet usage update")
         await coordinator.async_request_refresh()
+
+
+async def _async_handle_update_pet_weight(
+    hass: HomeAssistant, call: ServiceCall
+) -> None:
+    """Handle the update_pet_weight service call."""
+    pet_id = call.data["pet_id"]
+    weight_raw = call.data["weight"]
+    unit = call.data["unit"]
+    weight = round(weight_raw * 453.592) if unit == "lbs" else weight_raw
+
+    client: PetKitClient | None = None
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        if hasattr(entry, "runtime_data") and entry.runtime_data:
+            candidate = entry.runtime_data.client
+            if pet_id in candidate.petkit_entities:
+                client = candidate
+                break
+
+    if client is None:
+        raise ValueError(f"Pet with pet_id {pet_id} not found.")
+
+    LOGGER.debug(
+        "Updating weight for pet %s: %s %s → %s g", pet_id, weight_raw, unit, weight
+    )
+    await client.send_api_request(
+        device_id=pet_id,
+        action=PetCommand.PET_UPDATE_SETTING,
+        setting={"weight": str(weight)},
+    )
 
 
 async def async_setup_entry(
@@ -416,17 +416,30 @@ async def async_setup_entry(
             schema=SERVICE_SET_FEEDING_SCHEDULE_SCHEMA,
         )
 
-    if not hass.services.has_service(DOMAIN, SERVICE_UPDATE_PET_USAGE_RECORD):
+    if not hass.services.has_service(DOMAIN, SERVICE_UPDATE_LITTER_BOX_USAGE_RECORD):
 
-        async def handle_update_pet_usage_record(call: ServiceCall) -> None:
+        async def handle_update_litter_box_usage_record(call: ServiceCall) -> None:
             """Wrapper so HA detects this as a coroutine function."""
-            await _async_handle_update_pet_usage_record(hass, call)
+            await _async_handle_update_litter_box_usage_record(hass, call)
 
         hass.services.async_register(
             DOMAIN,
-            SERVICE_UPDATE_PET_USAGE_RECORD,
-            handle_update_pet_usage_record,
-            schema=SERVICE_UPDATE_PET_USAGE_RECORD_SCHEMA,
+            SERVICE_UPDATE_LITTER_BOX_USAGE_RECORD,
+            handle_update_litter_box_usage_record,
+            schema=SERVICE_UPDATE_LITTER_BOX_USAGE_RECORD_SCHEMA,
+        )
+
+    if not hass.services.has_service(DOMAIN, SERVICE_UPDATE_PET_WEIGHT):
+
+        async def handle_update_pet_weight(call: ServiceCall) -> None:
+            """Wrapper so HA detects this as a coroutine function."""
+            await _async_handle_update_pet_weight(hass, call)
+
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_UPDATE_PET_WEIGHT,
+            handle_update_pet_weight,
+            schema=SERVICE_UPDATE_PET_WEIGHT_SCHEMA,
         )
 
     return True

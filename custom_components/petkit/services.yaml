@@ -43,12 +43,12 @@ set_feeding_schedule:
       selector:
         object:
 
-update_pet_usage_record:
-  name: Update pet usage record
+update_litter_box_usage_record:
+  name: Update litter box usage record
   description: >
     Update a specific litter box usage record with the correct pet ID.
-    Optionally also updates the pet's recorded weight in their profile.
-    This is useful for automation using external presence detection (like Frigate) to fix misidentified pets.
+    This is useful for automation using external presence detection
+    (such as Frigate classification) to fix misidentified pets.
   fields:
     device_id:
       name: Device ID
@@ -61,7 +61,9 @@ update_pet_usage_record:
           mode: box
     old_pet_id:
       name: Old Pet ID
-      description: The original Pet ID that the device recorded (use "-1" or "0" if it was unknown/unrecognized).
+      description: >
+        The original Pet ID that the device recorded
+        (use "-1" or "0" if it was unknown/unrecognized).
       required: true
       example: "-1"
       selector:
@@ -81,12 +83,40 @@ update_pet_usage_record:
       selector:
         number:
           mode: box
-    weight:
-      name: Weight (Optional)
-      description: The weight in kg to assign to the pet's profile. If provided, updates the pet's weight on Petkit servers.
-      required: false
-      example: 5.42
+
+update_pet_weight:
+  name: Update pet weight record
+  description: >
+    Update the weight stored in a pet's Petkit profile.
+    Accepts grams (default) or lbs — lbs are converted to grams before sending to the API.
+  fields:
+    pet_id:
+      name: Pet ID
+      description: The numeric Petkit pet ID.
+      required: true
+      example: 123456789
       selector:
         number:
+          min: 1
           mode: box
-          step: 0.01
+    weight:
+      name: Weight
+      description: The weight in the unit specified by the 'unit' field (grams by default).
+      required: true
+      example: 5420
+      selector:
+        number:
+          min: 0
+          mode: box
+          step: 1
+    unit:
+      name: Unit
+      description: The unit of the provided weight value. Defaults to g (grams).
+      required: false
+      default: g
+      example: lbs
+      selector:
+        select:
+          options:
+            - g
+            - lbs
