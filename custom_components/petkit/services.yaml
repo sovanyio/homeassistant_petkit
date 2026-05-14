@@ -75,9 +75,9 @@ update_litter_box_usage_record:
       example: "123456789"
       selector:
         text:
-    timestamp:
-      name: Timestamp
-      description: The 'timeOut' timestamp of the record to update (epoch seconds).
+    time_out:
+      name: Time out
+      description: The out timestamp of the record to update (epoch seconds).
       required: true
       example: 1778271882
       selector:

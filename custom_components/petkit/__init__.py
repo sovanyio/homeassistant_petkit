@@ -120,7 +120,7 @@ SERVICE_UPDATE_LITTER_BOX_USAGE_RECORD_SCHEMA = vol.Schema(
         vol.Required("device_id"): vol.Coerce(int),
         vol.Required("old_pet_id"): cv.string,
         vol.Required("new_pet_id"): cv.string,
-        vol.Required("timestamp"): vol.Coerce(int),
+        vol.Required("time_out"): vol.Coerce(int),
     }
 )
 
@@ -221,7 +221,7 @@ async def _async_handle_update_litter_box_usage_record(
     device_id = call.data["device_id"]
     old_pet_id = call.data["old_pet_id"]
     new_pet_id = call.data["new_pet_id"]
-    time_out = call.data["timestamp"]
+    time_out = call.data["time_out"]
 
     client: PetKitClient | None = None
     coordinator = None
