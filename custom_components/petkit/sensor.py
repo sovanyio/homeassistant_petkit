@@ -119,11 +119,11 @@ def format_pet_date(timestamp):
 
 
 def _get_latest_usage_record_timestamp(device) -> datetime | None:
-    """Return the timestamp of the most recent pet usage record (event_type 15)."""
+    """Return the timestamp of the most recent pet usage record (event_type 10)."""
     records = device.device_records
     if not records:
         return None
-    usage_records = [r for r in records if r.event_type == 15]
+    usage_records = [r for r in records if r.event_type == 10]
     if not usage_records:
         return None
     latest = usage_records[0]
