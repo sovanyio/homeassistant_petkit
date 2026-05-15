@@ -244,11 +244,11 @@ async def _async_handle_update_litter_box_usage_record(
         time_out,
     )
     await client.send_api_request(
-        device_id=device_id,
-        action=LitterCommand.UPDATE_USAGE_RECORD,
+        device_id=int(new_pet_id),
+        action=PetCommand.UPDATE_USAGE_RECORD,
         setting={
             "old_pet_id": old_pet_id,
-            "new_pet_id": new_pet_id,
+            "device_id": device_id,
             "time_out": time_out,
         },
     )
