@@ -158,7 +158,7 @@ variables:
   latest_record: >
     {% set records = trigger.to_state.attributes.records | default([]) if trigger.platform == 'state' else [] %}
     {{ records | selectattr('eventType', 'eq', 10) | first if records | length > 0 else none }}
-  
+
   # notification
   notify_service_name: !input notify_service_name
 
