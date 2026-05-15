@@ -156,13 +156,15 @@ variables:
   # litterbox
   delta: !input time_delta
   latest_record: >
-    {% set records = trigger.to_state.attributes.records | default([]) %}
+    {% set records = trigger.to_state.attributes.records | default([]) if trigger.platform == 'state' else [] %}
     {{ records | selectattr('eventType', 'eq', 10) | first if records | length > 0 else none }}
-  frigate_cat_name: "{{ states(name_helper) }}"
+  
+  # notification
   notify_service_name: !input notify_service_name
 
   # frigate
   camera: !input target_camera
+  frigate_cat_name: "{{ states(name_helper) }}"
 
 triggers:
   - trigger: state
@@ -234,4 +236,4 @@ actions:
                   message: !input notify_message
                   data: !input notify_data
 
-mode: queued
+mode: parallel
