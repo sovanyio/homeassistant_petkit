@@ -24,9 +24,6 @@ blueprint:
 
     Suggested name: `Time cat seen on camera`.
 
-    3. Import the "Petkit + Frigate: Track Last Detected Cat (MQTT)" blueprint and
-    configure with your cat's names and the helpers created in steps 2 and 3.
-        
     4. Import this blueprint, then create an automation from it. Pick your litterbox
     entity and the helpers you just created.
   author: "sovanyio"
@@ -35,48 +32,68 @@ blueprint:
   domain: automation
   source_url: https://github.com/Jezza34000/homeassistant_petkit/blob/main/blueprints/automation/petkit/litterbox_frigate_pet_correction.yaml
   input:
-    litterbox:
-      name: Litterbox device records history sensor
-      description: The device records history sensor entity for the litterbox.
-      selector:
-        entity:
-          domain: sensor
-          integration: petkit
-    cat_name_helper:
-      name: Cat name helper
-      description: The helper entity that stores the cat's name.
-      selector:
-        entity:
-          domain: input_text
-    cat_timestamp_helper:
-      name: Cat timestamp helper
-      description: The helper entity that stores the cat's timestamp.
-      selector:
-        entity:
-          domain: input_datetime
-    cat_id_mapping:
-      name: Cat name to ID mapping
-      description: |
-        A mapping of case-sensitive cat names (frigate sub_label) to cat IDs (petkit id).
+    helpers:
+      name: Settings
+      icon: mdi:cogs
+      collapsed: false
+      input:
+        cat_name_helper:
+          name: Cat name helper
+          description: The helper entity that stores the cat's name.
+          selector:
+            entity:
+              domain: input_text
+        cat_timestamp_helper:
+          name: Cat timestamp helper
+          description: The helper entity that stores the cat's timestamp.
+          selector:
+            entity:
+              domain: input_datetime
+        time_delta:
+          name: Time delta
+          description: Maximum time difference between frigate detection and petkit record in seconds.
+          default: 300
+          selector:
+            number:
+              min: 0
+              step: 1
+    frigate:
+      name: Frigate configuration
+      icon: mdi:cctv
+      collapsed: false
+      input:
+        target_camera:
+          name: Camera name
+          description: "The Frigate camera name (e.g., litter_cam)."
+          selector:
+            text:
+    petkit:
+      name: Litter box configuration
+      icon: mdi:toilet
+      collapsed: false
+      input:
+        litterbox:
+          name: Litterbox device records history sensor
+          description: The device records history sensor entity for the litterbox.
+          selector:
+            entity:
+              domain: sensor
+              integration: petkit
+        cat_id_mapping:
+          name: Cat name to ID mapping
+          description: |
+            A mapping of case-sensitive cat names (frigate sub_label) to cat IDs (petkit id).
 
-        ```
-        Mittens: 1234567890
-        Whiskers: 0987654321
-        ```
-      selector:
-        object:
-    time_delta:
-      name: Time delta
-      description: Maximum time difference between frigate detection and petkit record in seconds.
-      default: 300
-      selector:
-        number:
-          min: 0
-          step: 1
+            ```
+            Mittens: 1234567890
+            Whiskers: 0987654321
+            ```
+          selector:
+            object:
     notification:
       name: Notification
-      icon: mdi:notification
-      collapsed: true
+      icon: mdi:bell
+      collapsed: false
       input:
         notify_service_name:
           name: Notification service name
@@ -98,7 +115,7 @@ blueprint:
           name: Notification message
           description: |
             Relevant variables available:
-            
+
             - Latest usage record
 
               ```
@@ -131,47 +148,90 @@ blueprint:
           default: {}
 
 variables:
+  # shared
   name_helper: !input cat_name_helper
   time_helper: !input cat_timestamp_helper
-  delta: !input time_delta
   names: !input cat_id_mapping
+
+  # litterbox
+  delta: !input time_delta
   latest_record: >
     {% set records = trigger.to_state.attributes.records | default([]) %}
     {{ records | selectattr('eventType', 'eq', 10) | first if records | length > 0 else none }}
   frigate_cat_name: "{{ states(name_helper) }}"
   notify_service_name: !input notify_service_name
 
+  # frigate
+  camera: !input target_camera
+
 triggers:
   - trigger: state
     entity_id: !input litterbox
     attribute: records
+    id: record_update
 
-conditions:
-  - condition: template
-    value_template: "{{ latest_record is not none }}"
-  - condition: template
-    value_template: "{{ states(name_helper) in names.keys() }}"
-  - condition: template
-    value_template: "{{ latest_record.petId | string != names.get(frigate_cat_name) | string }}"
-  - condition: template
-    value_template: >
-      {{ (latest_record.content.timeOut - as_timestamp(states(time_helper))) | abs < delta }}
+  - trigger: mqtt
+    topic: frigate/events
+    id: frigate_event
 
 actions:
-  - action: petkit.update_litter_box_usage_record
-    data:
-      device_id: "{{ latest_record.deviceId }}"
-      old_pet_id: "{{ latest_record.petId }}"
-      new_pet_id: "{{ names.get(frigate_cat_name) }}"
-      time_out: "{{ latest_record.content.timeOut }}"
-  - if:
-      - condition: template
-        value_template: "{{ notify_service_name | length > 0 }}"
-    then:
-      - action: "notify.{{ notify_service_name }}"
-        data:
-          title: !input notify_title
-          message: !input notify_message
-          data: !input notify_data
+  - choose:
+      # frigate saw a cat
+      - conditions:
+          - condition: trigger
+            id: frigate_event
+          # frigate saw a cat in our mapping, sanity check
+          - condition: template
+            value_template: "{{ trigger.payload_json['after']['sub_label'] in names.keys() }}"
+          # detection was on the configured camera
+          - condition: template
+            value_template: "{{ camera == '' or trigger.payload_json['after']['camera'] == camera }}"
+        sequence:
+          - action: input_text.set_value
+            target:
+              entity_id: !input cat_name_helper
+            data:
+              value: "{{ trigger.payload_json['after']['sub_label'] }}"
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: !input cat_timestamp_helper
+            data:
+              timestamp: "{{ now().timestamp() }}"
+
+      # petkit device records updated
+      - conditions:
+          - condition: trigger
+            id: record_update
+          # there is a usage record
+          - condition: template
+            value_template: "{{ latest_record is not none }}"
+          # frigate's last detection is in our mapping, sanity check
+          - condition: template
+            value_template: "{{ frigate_cat_name in names.keys() }}"
+          # the pet in the latest record is not the same as frigate's last detection
+          - condition: template
+            value_template: "{{ latest_record.petId | string != names.get(frigate_cat_name) | string }}"
+          # frigate's last detection was within the configured time window
+          - condition: template
+            value_template: "{{ (latest_record.content.timeOut - as_timestamp(states(time_helper))) | abs < delta }}"
+        sequence:
+          # make the correction
+          - action: petkit.update_litter_box_usage_record
+            data:
+              device_id: "{{ latest_record.deviceId }}"
+              old_pet_id: "{{ latest_record.petId }}"
+              new_pet_id: "{{ names.get(frigate_cat_name) }}"
+              time_out: "{{ latest_record.content.timeOut }}"
+
+          # send the notification, if configured
+          - if:
+              - condition: template
+                value_template: "{{ notify_service_name | length > 0 }}"
+            then:
+              - action: "notify.{{ notify_service_name }}"
+                data:
+                  title: !input notify_title
+                  message: !input notify_message
+                  data: !input notify_data
 
 mode: queued
