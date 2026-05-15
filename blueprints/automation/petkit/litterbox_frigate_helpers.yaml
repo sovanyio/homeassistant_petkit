@@ -1,0 +1,54 @@
+blueprint:
+  name: "Petkit + Frigate: Track last detected cat (MQTT)"
+  description: "Intended for use with `Petkit litter box: Auto-correct litter box records via Frigate` blueprint."
+  domain: automation
+  input:
+    tracked_labels:
+      name: Tracked sub-labels
+      description: "A comma-separated list of frigate cat sub-labels to track (e.g., Mittens, Whiskers)"
+      selector:
+        text:
+    target_camera:
+      name: Camera
+      description: "The Frigate camera name (e.g., litter_cam)."
+      selector:
+        text:
+    text_helper:
+      name: Name helper
+      selector:
+        entity:
+          domain: input_text
+    time_helper:
+      name: Timestamp helper
+      selector:
+        entity:
+          domain: input_datetime
+
+variables:
+  raw_labels: !input tracked_labels
+  labels_list: "{{ raw_labels.split(',') | map('trim') | list }}"
+  camera: !input target_camera
+  event_payload: "{{ trigger.payload_json['after'] }}"
+
+triggers:
+  - trigger: mqtt
+    topic: frigate/events
+
+conditions:
+  - condition: template
+    value_template: "{{ event_payload['sub_label'] in labels_list }}"
+  - condition: template
+    value_template: "{{ camera == '' or event_payload['camera'] == camera }}"
+
+actions:
+  - action: input_text.set_value
+    target:
+      entity_id: !input text_helper
+    data:
+      value: "{{ event_payload['sub_label'] }}"
+  - action: input_datetime.set_datetime
+    target:
+      entity_id: !input time_helper
+    data:
+      datetime: "{{ now() }}"
+mode: queued
